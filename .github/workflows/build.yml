@@ -1,0 +1,40 @@
+name: Build Linux Binary
+
+on:
+  push:
+    branches: [ main ]
+  release:
+    types: [ created ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Build static binary (Linux amd64)
+        env:
+          CGO_ENABLED: "0"
+          GOOS: linux
+          GOARCH: amd64
+        run: |
+          go build -ldflags="-s -w" -o vpnctl .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vpnctl-linux-amd64
+          path: vpnctl
+
+      - name: Upload to Release (if release event)
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: vpnctl
