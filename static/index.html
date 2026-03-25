@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>vpnctl</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg0:   #080b10;
+  --bg1:   #0d1117;
+  --bg2:   #161b22;
+  --bg3:   #1c2128;
+  --border:#21262d;
+  --border2:#2d333b;
+  --txt0:  #e6edf3;
+  --txt1:  #c9d1d9;
+  --txt2:  #8b949e;
+  --txt3:  #6e7681;
+  --green: #3fb950;
+  --green2:#2ea043;
+  --blue:  #58a6ff;
+  --blue2: #1f6feb;
+  --red:   #f85149;
+  --red2:  #da3633;
+  --amber: #d29922;
+  --mono:  'IBM Plex Mono', monospace;
+  --sans:  'IBM Plex Sans', sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; background: var(--bg0); color: var(--txt1); font-family: var(--sans); font-size: 14px; line-height: 1.5; }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg1); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+/* ── Layout ── */
+.app { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+/* ── Topbar ── */
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 24px; height: 52px; min-height: 52px;
+  background: var(--bg1); border-bottom: 1px solid var(--border);
+  font-family: var(--mono);
+}
+.logo { font-size: 15px; font-weight: 700; color: var(--txt0); letter-spacing: 0.04em; }
+.logo em { color: var(--green); font-style: normal; }
+.topbar-meta { display: flex; align-items: center; gap: 20px; font-size: 11px; color: var(--txt3); }
+.pulse { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--green); margin-right: 6px; animation: pulse 2.4s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.85)} }
+
+/* ── Stats bar ── */
+.statsbar {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  background: var(--bg1); border-bottom: 1px solid var(--border);
+  font-family: var(--mono);
+}
+.stat-box { padding: 12px 20px; border-right: 1px solid var(--border); }
+.stat-box:last-child { border-right: none; }
+.stat-label { font-size: 10px; font-weight: 600; letter-spacing: 0.12em; color: var(--txt3); text-transform: uppercase; margin-bottom: 4px; }
+.stat-value { font-size: 22px; font-weight: 700; color: var(--txt0); }
+.stat-value .unit { font-size: 11px; font-weight: 500; color: var(--txt3); margin-left: 2px; }
+.stat-value.green { color: var(--green); }
+.stat-value.blue  { color: var(--blue); }
+
+/* ── Main content ── */
+.content { display: grid; grid-template-columns: 1fr 340px; flex: 1; overflow: hidden; }
+.left-col  { display: flex; flex-direction: column; border-right: 1px solid var(--border); overflow: hidden; }
+.right-col { display: flex; flex-direction: column; overflow: hidden; }
+
+/* ── Panel ── */
+.panel { background: var(--bg1); flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.panel-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 20px 10px; border-bottom: 1px solid var(--border);
+}
+.panel-title { font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--txt3); font-family: var(--mono); }
+.panel-body { flex: 1; overflow-y: auto; padding: 12px 16px; }
+
+/* ── Upload zone ── */
+.upload-row { display: flex; gap: 8px; margin-bottom: 10px; }
+.upload-row input[type=text] {
+  flex: 1; background: var(--bg2); border: 1px solid var(--border2); border-radius: 5px;
+  padding: 7px 10px; color: var(--txt1); font-family: var(--mono); font-size: 12px;
+}
+.upload-zone {
+  border: 1px dashed var(--border2); border-radius: 6px;
+  padding: 18px; text-align: center; color: var(--txt3);
+  font-size: 12px; background: var(--bg2); cursor: pointer;
+  transition: border-color .2s, background .2s; margin-bottom: 14px;
+  font-family: var(--mono);
+}
+.upload-zone:hover, .upload-zone.drag { border-color: var(--blue2); background: #1a2233; color: var(--blue); }
+.upload-zone svg { display: block; margin: 0 auto 8px; opacity: .4; }
+#fileInput { display: none; }
+.divider { height: 1px; background: var(--border); margin: 12px 0; }
+
+/* ── Tunnel card ── */
+.tunnel-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 7px; padding: 12px 14px; margin-bottom: 8px;
+  display: grid; grid-template-columns: auto 1fr auto auto;
+  gap: 0 12px; align-items: center; transition: border-color .2s;
+}
+.tunnel-card.connected  { border-color: #1a3a1a; }
+.tunnel-card.reconnecting { border-color: #3a2a10; }
+.tunnel-card.disconnected { border-color: #2d1a1a; }
+.tun-badge {
+  font-family: var(--mono); font-size: 12px; font-weight: 700;
+  padding: 4px 9px; border-radius: 4px; background: #1a2a3a; color: var(--blue);
+  border: 1px solid #1a3a5a; min-width: 42px; text-align: center;
+}
+.tun-badge.off { background: var(--bg3); color: var(--txt3); border-color: var(--border2); }
+.tun-info { min-width: 0; }
+.tun-name { font-size: 13px; font-weight: 600; color: var(--txt0); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: var(--mono); }
+.tun-meta { font-size: 11px; color: var(--txt3); margin-top: 2px; font-family: var(--mono); }
+.tun-traffic { text-align: right; font-family: var(--mono); font-size: 11px; font-weight: 600; }
+.traf-rx { color: var(--blue); }
+.traf-tx { color: var(--green); }
+.traf-na { color: var(--txt3); }
+.tun-actions { display: flex; align-items: center; gap: 6px; }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.status-dot.connected  { background: var(--green); }
+.status-dot.connecting,
+.status-dot.reconnecting { background: var(--amber); animation: pulse 1.2s ease-in-out infinite; }
+.status-dot.disconnected { background: var(--red); }
+
+/* ── Buttons ── */
+.btn {
+  font-family: var(--mono); font-size: 11px; font-weight: 700;
+  padding: 5px 11px; border-radius: 4px; border: 1px solid; cursor: pointer;
+  transition: opacity .15s, transform .1s;
+  letter-spacing: 0.04em; text-transform: uppercase;
+}
+.btn:active { transform: scale(.97); }
+.btn-sm { padding: 4px 9px; font-size: 10px; }
+.btn-start  { background: #1a3a1a; border-color: #2a5a2a; color: var(--green); }
+.btn-stop   { background: #3a1a1a; border-color: #5a2a2a; color: var(--red); }
+.btn-restart{ background: #2a2510; border-color: #4a4010; color: var(--amber); }
+.btn-delete { background: transparent; border-color: var(--border2); color: var(--txt3); }
+.btn-delete:hover { border-color: var(--red2); color: var(--red); }
+.btn-primary{ background: #1a3a5a; border-color: #1f5a8a; color: var(--blue); }
+.btn-add    { background: #1a3a1a; border-color: #2a5a2a; color: var(--green); }
+
+/* ── Cron panel ── */
+.cron-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 7px; padding: 10px 14px; margin-bottom: 7px;
+  display: flex; align-items: center; gap: 10px;
+}
+.cron-expr { font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--green); min-width: 120px; }
+.cron-info { flex: 1; min-width: 0; }
+.cron-desc { font-size: 12px; font-weight: 600; color: var(--txt1); }
+.cron-next { font-size: 10px; color: var(--txt3); font-family: var(--mono); margin-top: 2px; }
+.badge { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 10px; letter-spacing: 0.06em; text-transform: uppercase; font-family: var(--mono); }
+.badge-green { background: #1a3a1a; color: var(--green); }
+.badge-red   { background: #3a1a1a; color: var(--red); }
+
+/* ── Cron form ── */
+.cron-form { display: grid; grid-template-columns: 1fr auto auto; gap: 6px; margin-top: 8px; }
+.cron-form input, .cron-form select {
+  background: var(--bg2); border: 1px solid var(--border2); border-radius: 5px;
+  padding: 6px 10px; color: var(--txt1); font-family: var(--mono); font-size: 12px;
+  font-weight: 500;
+}
+.cron-form select { background-color: var(--bg2); }
+
+/* ── Log panel ── */
+.log-wrap { flex: 1; overflow-y: auto; padding: 10px 16px; font-family: var(--mono); font-size: 11px; }
+.log-line { display: flex; gap: 10px; padding: 3px 0; border-bottom: 1px solid #0d1117; }
+.log-time { color: var(--txt3); min-width: 60px; flex-shrink: 0; font-weight: 500; }
+.log-msg.ok   { color: var(--green); font-weight: 600; }
+.log-msg.warn { color: var(--amber); font-weight: 600; }
+.log-msg.err  { color: var(--red);   font-weight: 700; }
+.log-empty { color: var(--txt3); text-align: center; padding: 20px 0; }
+
+/* ── Right col ── */
+.right-col .panel:first-child { border-bottom: 1px solid var(--border); flex: 0 0 auto; max-height: 50%; }
+.right-col .panel:last-child  { flex: 1; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- topbar -->
+  <div class="topbar">
+    <div class="logo">VPN<em>CTL</em></div>
+    <div class="topbar-meta">
+      <span id="active-count"><span class="pulse"></span>0 active</span>
+      <span id="server-ip">—</span>
+    </div>
+  </div>
+
+  <!-- stats bar -->
+  <div class="statsbar">
+    <div class="stat-box">
+      <div class="stat-label">Tunnels</div>
+      <div class="stat-value" id="s-tunnels">0<span class="unit">active</span></div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">Total RX</div>
+      <div class="stat-value blue" id="s-rx">0<span class="unit">B/s</span></div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">Total TX</div>
+      <div class="stat-value green" id="s-tx">0<span class="unit">B/s</span></div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">Uptime</div>
+      <div class="stat-value" id="s-uptime">—</div>
+    </div>
+  </div>
+
+  <!-- main -->
+  <div class="content">
+
+    <!-- left: tunnels -->
+    <div class="left-col">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Tunnel Configurations</span>
+        </div>
+        <div class="panel-body">
+
+          <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            click or drag .ovpn files here
+          </div>
+          <input type="file" id="fileInput" accept=".ovpn" multiple>
+
+          <div id="tunnelList"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- right col -->
+    <div class="right-col">
+
+      <!-- cron -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Scheduled Restarts</span>
+        </div>
+        <div class="panel-body">
+          <div id="cronList"></div>
+          <div class="divider"></div>
+          <div class="cron-form">
+            <input type="text" id="cronExpr" placeholder="*/30 * * * *" title="cron expression">
+            <select id="cronTarget">
+              <option value="all">all</option>
+            </select>
+            <button class="btn btn-add" onclick="addCron()">+ Add</button>
+          </div>
+          <div style="font-size:10px;color:var(--txt3);margin-top:6px;font-family:var(--mono);">
+            min &nbsp; hour &nbsp; dom &nbsp; month &nbsp; dow &nbsp;—&nbsp; e.g. */30 * * * *
+          </div>
+        </div>
+      </div>
+
+      <!-- logs -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Event Log</span>
+          <button class="btn btn-delete btn-sm" onclick="clearLogs()">Clear</button>
+        </div>
+        <div class="log-wrap" id="logList"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+const startedAt = Date.now();
+let tunnels = [];
+let logs = [];
+let localLogs = [];
+
+// ── Fetch helpers ─────────────────────────────────────────────────────────────
+async function api(url, opts) {
+  const r = await fetch(url, opts);
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || r.statusText);
+  return j;
+}
+
+// ── Poll ──────────────────────────────────────────────────────────────────────
+async function poll() {
+  try {
+    const data = await api('/api/stats');
+    tunnels = data.tunnels || [];
+    logs = data.logs || [];
+    render();
+  } catch(e) { console.error('poll:', e); }
+}
+
+setInterval(poll, 2000);
+poll();
+
+// ── Upload ─────────────────────────────────────────────────────────────────────
+document.getElementById('fileInput').addEventListener('change', async e => {
+  for (const f of e.target.files) await uploadFile(f);
+  e.target.value = '';
+});
+
+const dz = document.getElementById('dropZone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('drag'));
+dz.addEventListener('drop', async e => {
+  e.preventDefault(); dz.classList.remove('drag');
+  for (const f of e.dataTransfer.files) await uploadFile(f);
+});
+
+async function uploadFile(file) {
+  const fd = new FormData();
+  fd.append('config', file);
+  try {
+    await api('/api/tunnels/upload', { method: 'POST', body: fd });
+    await poll();
+  } catch(e) { alert('Upload failed: ' + e.message); }
+}
+
+// ── Tunnel actions ─────────────────────────────────────────────────────────────
+async function tunStart(i)   { await api('/api/tunnels/start?index='+i);   await poll(); }
+async function tunStop(i)    { await api('/api/tunnels/stop?index='+i);    await poll(); }
+async function tunRestart(i) { await api('/api/tunnels/restart?index='+i); await poll(); }
+async function tunDelete(i) {
+  if (!confirm('Delete this config?')) return;
+  await api('/api/tunnels/delete?index='+i, { method: 'POST' });
+  await poll();
+}
+async function tunToggleAR(i, val) {
+  await api('/api/tunnels/autoreconnect?index='+i+'&enabled='+val);
+  await poll();
+}
+
+// ── Cron ──────────────────────────────────────────────────────────────────────
+async function loadCron() {
+  const jobs = await api('/api/cron');
+  renderCron(jobs);
+}
+
+async function addCron() {
+  const expr = document.getElementById('cronExpr').value.trim();
+  const target = document.getElementById('cronTarget').value;
+  if (!expr) return;
+  try {
+    await api('/api/cron/add', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ expression: expr, target, action: 'restart' })
+    });
+    document.getElementById('cronExpr').value = '';
+    await loadCron();
+  } catch(e) { alert('Cron error: ' + e.message); }
+}
+
+async function deleteCron(id) {
+  await api('/api/cron/delete?id='+id);
+  await loadCron();
+}
+
+loadCron();
+setInterval(loadCron, 10000);
+
+function clearLogs() { localLogs = []; logs = []; renderLogs(); }
+
+// ── Formatters ────────────────────────────────────────────────────────────────
+function fmtRate(bps) {
+  if (bps <= 0) return '—';
+  if (bps < 1024) return bps.toFixed(0) + ' B/s';
+  if (bps < 1048576) return (bps/1024).toFixed(1) + ' KB/s';
+  return (bps/1048576).toFixed(2) + ' MB/s';
+}
+
+function fmtBytes(b) {
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+  if (b < 1073741824) return (b/1048576).toFixed(1) + ' MB';
+  return (b/1073741824).toFixed(2) + ' GB';
+}
+
+function fmtUptime(ms) {
+  const s = Math.floor(ms/1000);
+  const h = Math.floor(s/3600);
+  const m = Math.floor((s%3600)/60);
+  if (h > 0) return h+'h '+m+'m';
+  return m+'m '+(s%60)+'s';
+}
+
+function fmtNextRun(iso) {
+  const d = new Date(iso);
+  const diff = d - Date.now();
+  if (diff < 0) return 'soon';
+  const m = Math.floor(diff/60000);
+  const h = Math.floor(m/60);
+  if (h > 0) return 'in '+h+'h '+(m%60)+'m';
+  return 'in '+m+'m';
+}
+
+function fmtTime(iso) {
+  const d = new Date(iso);
+  return d.toTimeString().slice(0,8);
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function render() {
+  renderStats();
+  renderTunnels();
+  renderLogs();
+}
+
+function renderStats() {
+  const active = tunnels.filter(t => t.status === 'connected').length;
+  let totalRx = 0, totalTx = 0;
+  tunnels.forEach(t => { totalRx += t.rx_rate||0; totalTx += t.tx_rate||0; });
+
+  document.getElementById('s-tunnels').innerHTML = active + '<span class="unit">active</span>';
+  document.getElementById('s-rx').innerHTML = fmtRate(totalRx).replace(' ', '<span class="unit">') + '</span>';
+  document.getElementById('s-tx').innerHTML = fmtRate(totalTx).replace(' ', '<span class="unit">') + '</span>';
+  document.getElementById('s-uptime').textContent = fmtUptime(Date.now() - startedAt);
+  document.getElementById('active-count').innerHTML = '<span class="pulse"></span>' + active + ' active';
+
+  // update cron target select
+  const sel = document.getElementById('cronTarget');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="all">all</option>';
+  tunnels.forEach(t => {
+    const o = document.createElement('option');
+    o.value = t.tun_dev; o.textContent = t.tun_dev;
+    sel.appendChild(o);
+  });
+  if ([...sel.options].some(o => o.value === cur)) sel.value = cur;
+}
+
+function renderTunnels() {
+  const list = document.getElementById('tunnelList');
+  if (!tunnels.length) {
+    list.innerHTML = '<div style="color:var(--txt3);text-align:center;padding:24px 0;font-family:var(--mono);font-size:12px;">no configs — upload an .ovpn file</div>';
+    return;
+  }
+  list.innerHTML = tunnels.map(t => {
+    const st = t.status;
+    const isOn = st === 'connected';
+    const isPending = st === 'connecting' || st === 'reconnecting';
+    const isOff = st === 'disconnected';
+
+    const trafficHtml = isOn
+      ? `<div class="traf-rx">↓ ${fmtRate(t.rx_rate)}</div><div class="traf-tx">↑ ${fmtRate(t.tx_rate)}</div>`
+      : `<div class="traf-na">—</div>`;
+
+    const actionBtn = isOn || isPending
+      ? `<button class="btn btn-stop btn-sm" onclick="tunStop(${t.index})">Stop</button>`
+      : `<button class="btn btn-start btn-sm" onclick="tunStart(${t.index})">Start</button>`;
+
+    const arLabel = t.auto_reconnect ? 'AR:ON' : 'AR:OFF';
+    const arColor = t.auto_reconnect ? 'var(--green)' : 'var(--txt3)';
+
+    return `<div class="tunnel-card ${st}">
+      <div class="tun-badge ${isOff&&!isPending?'off':''}">${t.tun_dev}</div>
+      <div class="tun-info">
+        <div class="tun-name">${t.name}</div>
+        <div class="tun-meta">${t.config_file} &nbsp;·&nbsp; <span style="color:${st==='connected'?'var(--green)':st==='reconnecting'?'var(--amber)':'var(--red)'}; font-weight:700;">${st}</span></div>
+      </div>
+      <div class="tun-traffic">${trafficHtml}</div>
+      <div class="tun-actions">
+        <span class="status-dot ${st}"></span>
+        ${actionBtn}
+        <button class="btn btn-restart btn-sm" onclick="tunRestart(${t.index})" title="Restart">↺</button>
+        <button class="btn btn-delete btn-sm" onclick="tunToggleAR(${t.index},${!t.auto_reconnect})" style="color:${arColor};border-color:${arColor}22" title="Toggle auto-reconnect">${arLabel}</button>
+        <button class="btn btn-delete btn-sm" onclick="tunDelete(${t.index})" title="Delete">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderCron(jobs) {
+  const list = document.getElementById('cronList');
+  if (!jobs || !jobs.length) {
+    list.innerHTML = '<div style="color:var(--txt3);font-size:11px;font-family:var(--mono);padding:4px 0;">no scheduled jobs</div>';
+    return;
+  }
+  list.innerHTML = jobs.map(j => `
+    <div class="cron-card">
+      <div class="cron-expr">${j.expression}</div>
+      <div class="cron-info">
+        <div class="cron-desc">${j.action} · ${j.target}</div>
+        <div class="cron-next">next: ${fmtNextRun(j.next_run)}</div>
+      </div>
+      <span class="badge ${j.enabled?'badge-green':'badge-red'}">${j.enabled?'on':'off'}</span>
+      <button class="btn btn-delete btn-sm" onclick="deleteCron(${j.id})">✕</button>
+    </div>`).join('');
+}
+
+function renderLogs() {
+  const list = document.getElementById('logList');
+  const all = [...localLogs, ...logs];
+  if (!all.length) {
+    list.innerHTML = '<div class="log-empty">no events yet</div>';
+    return;
+  }
+  list.innerHTML = all.slice(0, 100).map(l =>
+    `<div class="log-line">
+      <span class="log-time">${fmtTime(l.time)}</span>
+      <span class="log-msg ${l.level}">${l.message}</span>
+    </div>`
+  ).join('');
+}
+</script>
+</body>
+</html>
