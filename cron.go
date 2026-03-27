@@ -1,89 +1,54 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
-	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 )
 
-type CronJob struct {
-	ID         int    `json:"id"`
-	Expression string `json:"expression"`
-	Target     string `json:"target"` // "all" or "tun0", "tun1", ...
-	Action     string `json:"action"` // "restart" | "start" | "stop"
-	Enabled    bool   `json:"enabled"`
-	NextRun    time.Time `json:"next_run"`
-	LastRun    *time.Time `json:"last_run,omitempty"`
-}
-
-type CronState struct {
-	Jobs    []CronJob `json:"jobs"`
-	NextID  int       `json:"next_id"`
-}
-
 type CronManager struct {
-	mu      sync.Mutex
-	jobs    []CronJob
-	nextID  int
-	dataDir string
-	vpn     *VPNManager
-	stopCh  chan struct{}
+	mu     sync.Mutex
+	jobs   []CronJob
+	nextID int
+	vpn    *VPNManager
+	state  *AppState
+	stopCh chan struct{}
 }
 
-func NewCronManager(vpn *VPNManager) *CronManager {
+func NewCronManager(vpn *VPNManager, state *AppState) *CronManager {
 	return &CronManager{
 		vpn:    vpn,
+		state:  state,
 		stopCh: make(chan struct{}),
 	}
 }
 
-func (c *CronManager) SetDataDir(dir string) {
+func (c *CronManager) Load() {
+	snap := c.state.Snap()
 	c.mu.Lock()
-	c.dataDir = dir
-	c.mu.Unlock()
-}
-
-func (c *CronManager) stateFile() string {
-	return filepath.Join(c.vpn.dataDir, "cron.json")
-}
-
-func (c *CronManager) SaveState() {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	cs := CronState{Jobs: c.jobs, NextID: c.nextID}
-	data, err := json.MarshalIndent(cs, "", "  ")
-	if err != nil {
-		return
-	}
-	os.WriteFile(c.stateFile(), data, 0644)
-}
-
-func (c *CronManager) LoadState() {
-	data, err := os.ReadFile(c.stateFile())
-	if err != nil {
-		return
-	}
-	var cs CronState
-	if err := json.Unmarshal(data, &cs); err != nil {
-		log.Printf("cron LoadState: %v", err)
-		return
-	}
-	c.mu.Lock()
-	c.jobs = cs.Jobs
-	c.nextID = cs.NextID
-	// recalculate next runs
+	c.jobs = snap.Cron.Jobs
+	c.nextID = snap.Cron.NextID
 	for i := range c.jobs {
 		c.jobs[i].NextRun = nextCronRun(c.jobs[i].Expression, time.Now())
 	}
 	c.mu.Unlock()
 	log.Printf("Loaded %d cron jobs", len(c.jobs))
+}
+
+func (c *CronManager) save() {
+	c.mu.Lock()
+	jobs := make([]CronJob, len(c.jobs))
+	copy(jobs, c.jobs)
+	nextID := c.nextID
+	c.mu.Unlock()
+
+	c.state.mu.Lock()
+	c.state.sf.Cron = PersistedCron{Jobs: jobs, NextID: nextID}
+	c.state.mu.Unlock()
+	c.state.Save()
 }
 
 func (c *CronManager) AddJob(expr, target, action string) (*CronJob, error) {
@@ -93,7 +58,6 @@ func (c *CronManager) AddJob(expr, target, action string) (*CronJob, error) {
 	if action == "" {
 		action = "restart"
 	}
-
 	c.mu.Lock()
 	job := CronJob{
 		ID:         c.nextID,
@@ -106,8 +70,7 @@ func (c *CronManager) AddJob(expr, target, action string) (*CronJob, error) {
 	c.nextID++
 	c.jobs = append(c.jobs, job)
 	c.mu.Unlock()
-
-	c.SaveState()
+	c.save()
 	return &job, nil
 }
 
@@ -117,7 +80,7 @@ func (c *CronManager) DeleteJob(id int) error {
 	for i, j := range c.jobs {
 		if j.ID == id {
 			c.jobs = append(c.jobs[:i], c.jobs[i+1:]...)
-			go c.SaveState()
+			go c.save()
 			return nil
 		}
 	}
@@ -161,21 +124,35 @@ func (c *CronManager) tick(now time.Time) {
 		}
 	}
 	c.mu.Unlock()
-
 	for _, job := range toRun {
-		c.execute(job)
+		go c.execute(job)
 	}
 	if len(toRun) > 0 {
-		c.SaveState()
+		c.save()
 	}
 }
 
 func (c *CronManager) execute(job CronJob) {
+	c.state.AddLog("warn", fmt.Sprintf("[cron #%d] %s %s", job.ID, job.Action, job.Target))
 	tunnels := c.vpn.GetTunnels()
-	c.vpn.addLog("warn", fmt.Sprintf("[cron #%d] %s %s", job.ID, job.Action, job.Target))
+
+	if job.Target == "all" {
+		for _, t := range tunnels {
+			switch job.Action {
+			case "restart":
+				c.vpn.RestartTunnel(t.Index)
+			case "start":
+				c.vpn.StartTunnel(t.Index)
+			case "stop":
+				c.vpn.StopTunnel(t.Index)
+			}
+			time.Sleep(200 * time.Millisecond)
+		}
+		return
+	}
 
 	for _, t := range tunnels {
-		if job.Target != "all" && job.Target != t.TunDev {
+		if job.Target != t.TunDev {
 			continue
 		}
 		switch job.Action {
@@ -189,33 +166,22 @@ func (c *CronManager) execute(job CronJob) {
 	}
 }
 
-// ── Cron expression parser (5-field standard) ─────────────────────────────────
+// ── Cron expression parser ────────────────────────────────────────────────────
 
 func validateCron(expr string) error {
-	fields := strings.Fields(expr)
-	if len(fields) != 5 {
-		return fmt.Errorf("cron expression must have 5 fields (min hour dom month dow)")
+	if len(strings.Fields(expr)) != 5 {
+		return fmt.Errorf("cron must have 5 fields: min hour dom month dow")
 	}
 	return nil
 }
 
-// nextCronRun returns the next time after `after` that matches the cron expression.
 func nextCronRun(expr string, after time.Time) time.Time {
 	fields := strings.Fields(expr)
 	if len(fields) != 5 {
 		return after.Add(time.Minute)
 	}
-
-	minute := fields[0]
-	hour := fields[1]
-	// dom := fields[2]  (simplified: we match * and /n)
-	// month := fields[3]
-	dow := fields[4]
-
-	// start from next minute
+	minute, hour, dow := fields[0], fields[1], fields[4]
 	t := after.Truncate(time.Minute).Add(time.Minute)
-
-	// search up to 1 year
 	limit := after.Add(366 * 24 * time.Hour)
 	for t.Before(limit) {
 		if matchField(minute, t.Minute(), 0, 59) &&
@@ -232,7 +198,6 @@ func matchField(field string, value, min, max int) bool {
 	if field == "*" {
 		return true
 	}
-	// */n
 	if strings.HasPrefix(field, "*/") {
 		n, err := strconv.Atoi(field[2:])
 		if err != nil || n <= 0 {
@@ -240,7 +205,6 @@ func matchField(field string, value, min, max int) bool {
 		}
 		return value%n == 0
 	}
-	// a-b
 	if strings.Contains(field, "-") {
 		parts := strings.SplitN(field, "-", 2)
 		lo, e1 := strconv.Atoi(parts[0])
@@ -250,7 +214,6 @@ func matchField(field string, value, min, max int) bool {
 		}
 		return value >= lo && value <= hi
 	}
-	// a,b,c
 	if strings.Contains(field, ",") {
 		for _, p := range strings.Split(field, ",") {
 			if v, err := strconv.Atoi(strings.TrimSpace(p)); err == nil && v == value {
@@ -259,10 +222,6 @@ func matchField(field string, value, min, max int) bool {
 		}
 		return false
 	}
-	// literal
 	v, err := strconv.Atoi(field)
-	if err != nil {
-		return false
-	}
-	return v == value
+	return err == nil && v == value
 }
