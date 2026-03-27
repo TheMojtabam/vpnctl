@@ -1,4 +1,4 @@
-name: Build Linux Binary
+name: Build & Release
 
 on:
   push:
@@ -8,33 +8,66 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+
+  # ── Linux (required — failure blocks release) ─────────────────────────────
+  build-linux:
+    name: Build Linux amd64
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      - uses: actions/setup-go@v5
         with:
           go-version: '1.21'
 
-      - name: Build static binary (Linux amd64)
+      - name: Build (static, embedded packages)
         env:
           CGO_ENABLED: "0"
           GOOS: linux
           GOARCH: amd64
         run: |
-          go build -ldflags="-s -w" -o vpnctl .
+          go build -ldflags="-s -w" -o vpnctl-linux-amd64 .
+          echo "Size: $(du -sh vpnctl-linux-amd64)"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: vpnctl-linux-amd64
-          path: vpnctl
+          path: vpnctl-linux-amd64
 
-      - name: Upload to Release (if release event)
+      - name: Attach to release
         if: github.event_name == 'release'
         uses: softprops/action-gh-release@v2
         with:
-          files: vpnctl
+          files: vpnctl-linux-amd64
+
+  # ── Windows (optional — failure is skipped, Linux still ships) ─────────────
+  build-windows:
+    name: Build Windows amd64
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Build
+        env:
+          CGO_ENABLED: "0"
+          GOOS: windows
+          GOARCH: amd64
+        run: go build -ldflags="-s -w" -o vpnctl-windows-amd64.exe .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vpnctl-windows-amd64
+          path: vpnctl-windows-amd64.exe
+
+      - name: Attach to release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: vpnctl-windows-amd64.exe
