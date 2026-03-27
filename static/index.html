@@ -4,512 +4,884 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>vpnctl</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-:root {
-  --bg0:   #080b10;
-  --bg1:   #0d1117;
-  --bg2:   #161b22;
-  --bg3:   #1c2128;
-  --border:#21262d;
-  --border2:#2d333b;
-  --txt0:  #e6edf3;
-  --txt1:  #c9d1d9;
-  --txt2:  #8b949e;
-  --txt3:  #6e7681;
-  --green: #3fb950;
-  --green2:#2ea043;
-  --blue:  #58a6ff;
-  --blue2: #1f6feb;
-  --red:   #f85149;
-  --red2:  #da3633;
-  --amber: #d29922;
-  --mono:  'IBM Plex Mono', monospace;
-  --sans:  'IBM Plex Sans', sans-serif;
+:root{
+  --bg0:#06090e;--bg1:#0a0f18;--bg2:#101827;--bg3:#162033;--bg4:#1c2a40;
+  --border:#192438;--border2:#243450;--border3:#2e4264;
+  --txt0:#eaf2ff;--txt1:#b8cde8;--txt2:#7a9ec0;--txt3:#4a6a90;--txt4:#2e4560;
+  --green:#1de9b6;--green2:#00c49a;--green3:#053828;--green4:#021c14;
+  --blue:#41b8ff;--blue2:#1090e0;--blue3:#0a3060;--blue4:#051828;
+  --red:#ff5e6a;--red2:#d92b38;--red3:#3a0a0c;--red4:#1e0506;
+  --amber:#ffb930;--amber2:#cc8a00;--amber3:#3a2400;--amber4:#1e1200;
+  --purple:#b88aff;--purple3:#2a1060;--purple4:#140830;
+  --cyan:#22e5ff;--cyan3:#082038;--cyan4:#041018;
+  --mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;
 }
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { height: 100%; background: var(--bg0); color: var(--txt1); font-family: var(--sans); font-size: 14px; line-height: 1.5; }
-
-/* ── Scrollbar ── */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: var(--bg1); }
-::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
-
-/* ── Layout ── */
-.app { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-
-/* ── Topbar ── */
-.topbar {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 0 24px; height: 52px; min-height: 52px;
-  background: var(--bg1); border-bottom: 1px solid var(--border);
-  font-family: var(--mono);
-}
-.logo { font-size: 15px; font-weight: 700; color: var(--txt0); letter-spacing: 0.04em; }
-.logo em { color: var(--green); font-style: normal; }
-.topbar-meta { display: flex; align-items: center; gap: 20px; font-size: 11px; color: var(--txt3); }
-.pulse { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--green); margin-right: 6px; animation: pulse 2.4s ease-in-out infinite; }
-@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.85)} }
-
-/* ── Stats bar ── */
-.statsbar {
-  display: grid; grid-template-columns: repeat(4, 1fr);
-  background: var(--bg1); border-bottom: 1px solid var(--border);
-  font-family: var(--mono);
-}
-.stat-box { padding: 12px 20px; border-right: 1px solid var(--border); }
-.stat-box:last-child { border-right: none; }
-.stat-label { font-size: 10px; font-weight: 600; letter-spacing: 0.12em; color: var(--txt3); text-transform: uppercase; margin-bottom: 4px; }
-.stat-value { font-size: 22px; font-weight: 700; color: var(--txt0); }
-.stat-value .unit { font-size: 11px; font-weight: 500; color: var(--txt3); margin-left: 2px; }
-.stat-value.green { color: var(--green); }
-.stat-value.blue  { color: var(--blue); }
-
-/* ── Main content ── */
-.content { display: grid; grid-template-columns: 1fr 340px; flex: 1; overflow: hidden; }
-.left-col  { display: flex; flex-direction: column; border-right: 1px solid var(--border); overflow: hidden; }
-.right-col { display: flex; flex-direction: column; overflow: hidden; }
-
-/* ── Panel ── */
-.panel { background: var(--bg1); flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-.panel-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 14px 20px 10px; border-bottom: 1px solid var(--border);
-}
-.panel-title { font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--txt3); font-family: var(--mono); }
-.panel-body { flex: 1; overflow-y: auto; padding: 12px 16px; }
-
-/* ── Upload zone ── */
-.upload-row { display: flex; gap: 8px; margin-bottom: 10px; }
-.upload-row input[type=text] {
-  flex: 1; background: var(--bg2); border: 1px solid var(--border2); border-radius: 5px;
-  padding: 7px 10px; color: var(--txt1); font-family: var(--mono); font-size: 12px;
-}
-.upload-zone {
-  border: 1px dashed var(--border2); border-radius: 6px;
-  padding: 18px; text-align: center; color: var(--txt3);
-  font-size: 12px; background: var(--bg2); cursor: pointer;
-  transition: border-color .2s, background .2s; margin-bottom: 14px;
-  font-family: var(--mono);
-}
-.upload-zone:hover, .upload-zone.drag { border-color: var(--blue2); background: #1a2233; color: var(--blue); }
-.upload-zone svg { display: block; margin: 0 auto 8px; opacity: .4; }
-#fileInput { display: none; }
-.divider { height: 1px; background: var(--border); margin: 12px 0; }
-
-/* ── Tunnel card ── */
-.tunnel-card {
-  background: var(--bg2); border: 1px solid var(--border);
-  border-radius: 7px; padding: 12px 14px; margin-bottom: 8px;
-  display: grid; grid-template-columns: auto 1fr auto auto;
-  gap: 0 12px; align-items: center; transition: border-color .2s;
-}
-.tunnel-card.connected  { border-color: #1a3a1a; }
-.tunnel-card.reconnecting { border-color: #3a2a10; }
-.tunnel-card.disconnected { border-color: #2d1a1a; }
-.tun-badge {
-  font-family: var(--mono); font-size: 12px; font-weight: 700;
-  padding: 4px 9px; border-radius: 4px; background: #1a2a3a; color: var(--blue);
-  border: 1px solid #1a3a5a; min-width: 42px; text-align: center;
-}
-.tun-badge.off { background: var(--bg3); color: var(--txt3); border-color: var(--border2); }
-.tun-info { min-width: 0; }
-.tun-name { font-size: 13px; font-weight: 600; color: var(--txt0); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: var(--mono); }
-.tun-meta { font-size: 11px; color: var(--txt3); margin-top: 2px; font-family: var(--mono); }
-.tun-traffic { text-align: right; font-family: var(--mono); font-size: 11px; font-weight: 600; }
-.traf-rx { color: var(--blue); }
-.traf-tx { color: var(--green); }
-.traf-na { color: var(--txt3); }
-.tun-actions { display: flex; align-items: center; gap: 6px; }
-.status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.status-dot.connected  { background: var(--green); }
-.status-dot.connecting,
-.status-dot.reconnecting { background: var(--amber); animation: pulse 1.2s ease-in-out infinite; }
-.status-dot.disconnected { background: var(--red); }
-
-/* ── Buttons ── */
-.btn {
-  font-family: var(--mono); font-size: 11px; font-weight: 700;
-  padding: 5px 11px; border-radius: 4px; border: 1px solid; cursor: pointer;
-  transition: opacity .15s, transform .1s;
-  letter-spacing: 0.04em; text-transform: uppercase;
-}
-.btn:active { transform: scale(.97); }
-.btn-sm { padding: 4px 9px; font-size: 10px; }
-.btn-start  { background: #1a3a1a; border-color: #2a5a2a; color: var(--green); }
-.btn-stop   { background: #3a1a1a; border-color: #5a2a2a; color: var(--red); }
-.btn-restart{ background: #2a2510; border-color: #4a4010; color: var(--amber); }
-.btn-delete { background: transparent; border-color: var(--border2); color: var(--txt3); }
-.btn-delete:hover { border-color: var(--red2); color: var(--red); }
-.btn-primary{ background: #1a3a5a; border-color: #1f5a8a; color: var(--blue); }
-.btn-add    { background: #1a3a1a; border-color: #2a5a2a; color: var(--green); }
-
-/* ── Cron panel ── */
-.cron-card {
-  background: var(--bg2); border: 1px solid var(--border);
-  border-radius: 7px; padding: 10px 14px; margin-bottom: 7px;
-  display: flex; align-items: center; gap: 10px;
-}
-.cron-expr { font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--green); min-width: 120px; }
-.cron-info { flex: 1; min-width: 0; }
-.cron-desc { font-size: 12px; font-weight: 600; color: var(--txt1); }
-.cron-next { font-size: 10px; color: var(--txt3); font-family: var(--mono); margin-top: 2px; }
-.badge { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 10px; letter-spacing: 0.06em; text-transform: uppercase; font-family: var(--mono); }
-.badge-green { background: #1a3a1a; color: var(--green); }
-.badge-red   { background: #3a1a1a; color: var(--red); }
-
-/* ── Cron form ── */
-.cron-form { display: grid; grid-template-columns: 1fr auto auto; gap: 6px; margin-top: 8px; }
-.cron-form input, .cron-form select {
-  background: var(--bg2); border: 1px solid var(--border2); border-radius: 5px;
-  padding: 6px 10px; color: var(--txt1); font-family: var(--mono); font-size: 12px;
-  font-weight: 500;
-}
-.cron-form select { background-color: var(--bg2); }
-
-/* ── Log panel ── */
-.log-wrap { flex: 1; overflow-y: auto; padding: 10px 16px; font-family: var(--mono); font-size: 11px; }
-.log-line { display: flex; gap: 10px; padding: 3px 0; border-bottom: 1px solid #0d1117; }
-.log-time { color: var(--txt3); min-width: 60px; flex-shrink: 0; font-weight: 500; }
-.log-msg.ok   { color: var(--green); font-weight: 600; }
-.log-msg.warn { color: var(--amber); font-weight: 600; }
-.log-msg.err  { color: var(--red);   font-weight: 700; }
-.log-empty { color: var(--txt3); text-align: center; padding: 20px 0; }
-
-/* ── Right col ── */
-.right-col .panel:first-child { border-bottom: 1px solid var(--border); flex: 0 0 auto; max-height: 50%; }
-.right-col .panel:last-child  { flex: 1; }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;background:var(--bg0);color:var(--txt1);font-family:var(--sans);font-size:13px;line-height:1.5;overflow:hidden;}
+::-webkit-scrollbar{width:4px;height:4px;} ::-webkit-scrollbar-track{background:transparent;} ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+button,input,select,textarea{font-family:var(--mono);} button{cursor:pointer;}
+.app{display:flex;flex-direction:column;height:100vh;}
+/* TOPBAR */
+.topbar{display:flex;align-items:center;gap:10px;padding:0 14px;height:44px;min-height:44px;background:var(--bg1);border-bottom:1px solid var(--border);z-index:100;position:relative;}
+.logo{font-family:var(--mono);font-size:15px;font-weight:700;color:var(--txt0);letter-spacing:.06em;} .logo em{color:var(--green);font-style:normal;}
+.spacer{flex:1;}
+.pill{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10px;background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:3px 8px;color:var(--txt3);white-space:nowrap;}
+.pill span{color:var(--txt2);font-weight:600;} .pill.ks-on{background:var(--amber4);border-color:var(--amber3);} .pill.ks-on span{color:var(--amber);}
+.dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.dot.green{background:var(--green);animation:pulse 2.5s ease infinite;} .dot.amber{background:var(--amber);animation:pulse 1.2s ease infinite;} .dot.off{background:var(--txt4);}
+/* STATSBAR */
+.statsbar{display:grid;grid-template-columns:repeat(8,1fr);background:var(--bg1);border-bottom:1px solid var(--border);flex-shrink:0;}
+.stat{padding:6px 10px;border-right:1px solid var(--border);transition:background .12s;cursor:default;} .stat:last-child{border-right:none;} .stat:hover{background:var(--bg2);}
+.stat-lbl{font-size:8px;font-weight:700;letter-spacing:.12em;color:var(--txt4);text-transform:uppercase;font-family:var(--mono);margin-bottom:1px;}
+.stat-val{font-size:15px;font-weight:700;color:var(--txt0);font-family:var(--mono);line-height:1.1;}
+.stat-val .u{font-size:9px;font-weight:400;color:var(--txt3);margin-left:1px;}
+.stat-val.green{color:var(--green);} .stat-val.blue{color:var(--blue);} .stat-val.amber{color:var(--amber);} .stat-val.purple{color:var(--purple);} .stat-val.cyan{color:var(--cyan);}
+.stat-sub{font-size:8px;color:var(--txt4);font-family:var(--mono);}
+/* ALERT BAR */
+.alert-bar{display:none;align-items:center;gap:8px;padding:5px 14px;background:var(--red4);border-bottom:1px solid var(--red3);font-family:var(--mono);font-size:10px;flex-shrink:0;}
+.alert-bar.show{display:flex;} .alert-bar .msg{color:var(--red);font-weight:700;flex:1;}
+/* TABBAR */
+.tabbar{display:flex;background:var(--bg1);border-bottom:1px solid var(--border);padding:0 12px;flex-shrink:0;}
+.tab{padding:7px 13px;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;font-family:var(--mono);color:var(--txt3);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap;}
+.tab.active{color:var(--blue);border-bottom-color:var(--blue);} .tab:hover:not(.active){color:var(--txt1);}
+.tbadge{display:inline-block;font-size:8px;font-weight:700;padding:1px 5px;border-radius:8px;margin-left:4px;}
+.tbadge.b{background:var(--blue3);color:var(--blue);} .tbadge.g{background:var(--green3);color:var(--green);}
+/* LAYOUT */
+.content{display:grid;grid-template-columns:1fr 280px;flex:1;overflow:hidden;}
+.left-col{display:flex;flex-direction:column;border-right:1px solid var(--border);overflow:hidden;}
+.right-col{display:flex;flex-direction:column;overflow:hidden;}
+.tab-panel{display:none;flex:1;overflow:hidden;flex-direction:column;} .tab-panel.active{display:flex;}
+/* PANEL */
+.panel{background:var(--bg1);display:flex;flex-direction:column;overflow:hidden;flex:1;}
+.ph{display:flex;align-items:center;justify-content:space-between;padding:7px 12px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.ph-title{font-size:9px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--txt3);font-family:var(--mono);}
+.ph-actions{display:flex;gap:3px;align-items:center;}
+.pb{flex:1;overflow-y:auto;padding:8px 10px;}
+/* BUTTONS */
+.btn{font-family:var(--mono);font-size:9px;font-weight:700;padding:3px 7px;border-radius:3px;border:1px solid;cursor:pointer;transition:all .12s;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap;}
+.btn:active{transform:scale(.96);}
+.btn-g{background:var(--green4);border-color:var(--green3);color:var(--green);}
+.btn-b{background:var(--blue4);border-color:var(--blue3);color:var(--blue);}
+.btn-r{background:var(--red4);border-color:var(--red3);color:var(--red);}
+.btn-a{background:var(--amber4);border-color:var(--amber3);color:var(--amber);}
+.btn-p{background:var(--purple4);border-color:var(--purple3);color:var(--purple);}
+.btn-c{background:var(--cyan4);border-color:var(--cyan3);color:var(--cyan);}
+.btn-ghost{background:transparent;border-color:var(--border2);color:var(--txt3);}
+.btn-ghost:hover{border-color:var(--red3);color:var(--red);}
+/* TOGGLE */
+.tog{position:relative;width:30px;height:15px;flex-shrink:0;}
+.tog input{opacity:0;width:0;height:0;position:absolute;}
+.tog-sl{position:absolute;inset:0;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;cursor:pointer;transition:all .18s;}
+.tog-sl::before{content:'';position:absolute;height:9px;width:9px;left:2px;top:2px;background:var(--txt3);border-radius:50%;transition:all .18s;}
+.tog input:checked+.tog-sl{background:var(--green3);border-color:var(--green2);}
+.tog input:checked+.tog-sl::before{transform:translateX(15px);background:var(--green);}
+.tog-lbl{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--txt3);}
+.tog-lbl.on{color:var(--green);}
+/* MISC */
+.sec-lbl{font-size:8px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--txt4);font-family:var(--mono);margin-bottom:5px;}
+.divider{height:1px;background:var(--border);margin:7px 0;}
+.upload-zone{border:1px dashed var(--border2);border-radius:5px;padding:9px;text-align:center;font-size:10px;color:var(--txt3);background:var(--bg2);cursor:pointer;transition:all .2s;font-family:var(--mono);margin-bottom:7px;}
+.upload-zone:hover{border-color:var(--blue3);background:var(--blue4);color:var(--blue);}
+/* TUNNEL CARD */
+.tcard{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:8px 10px;margin-bottom:5px;transition:border-color .2s;}
+.tcard.connected{border-color:#0a3020;} .tcard.reconnecting,.tcard.warning{border-color:#3a2400;}
+.tcard-r1{display:flex;align-items:center;gap:5px;margin-bottom:5px;flex-wrap:wrap;}
+.tun-num{font-family:var(--mono);font-size:10px;font-weight:700;padding:2px 6px;border-radius:3px;min-width:32px;text-align:center;background:var(--blue4);color:var(--blue);border:1px solid var(--blue3);}
+.tun-num.off{background:var(--bg3);color:var(--txt3);border-color:var(--border2);}
+.tun-name{font-size:11px;font-weight:600;color:var(--txt0);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--mono);}
+.sdot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.sdot.connected{background:var(--green);} .sdot.reconnecting,.sdot.connecting{background:var(--amber);animation:pulse 1.2s ease infinite;} .sdot.disconnected{background:var(--red);}
+.sb{display:inline-flex;align-items:center;gap:2px;font-family:var(--mono);font-size:8px;font-weight:700;padding:1px 5px;border-radius:8px;white-space:nowrap;}
+.sb-fast{background:var(--green3);color:var(--green);border:1px solid #0a4038;} .sb-med{background:var(--amber3);color:var(--amber);border:1px solid #4a3000;} .sb-slow{background:var(--red3);color:var(--red);border:1px solid #5a1010;} .sb-none{background:var(--bg3);color:var(--txt3);border:1px solid var(--border2);}
+.nbadge{font-family:var(--mono);font-size:8px;font-weight:700;padding:1px 5px;border-radius:2px;white-space:nowrap;}
+.nb-udp{background:var(--green4);color:var(--green);border:1px solid var(--green3);} .nb-tcp{background:var(--blue4);color:var(--blue);border:1px solid var(--blue3);} .nb-mtu{background:var(--cyan4);color:var(--cyan);border:1px solid var(--cyan3);} .nb-comp{background:var(--purple4);color:var(--purple);border:1px solid var(--purple3);}
+.tcard-metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-bottom:5px;}
+.tc-ml{font-size:8px;letter-spacing:.06em;color:var(--txt3);text-transform:uppercase;font-weight:700;font-family:var(--mono);}
+.tc-mv{font-size:10px;font-weight:700;font-family:var(--mono);}
+.tc-mv.rx{color:var(--blue);} .tc-mv.tx{color:var(--green);} .tc-mv.na{color:var(--txt4);} .tc-mv.pg{color:var(--green);} .tc-mv.pw{color:var(--amber);} .tc-mv.pb{color:var(--red);}
+.tcard-foot{display:flex;align-items:center;gap:4px;flex-wrap:wrap;padding-top:5px;border-top:1px solid var(--border);}
+.tcard-selects{display:flex;gap:3px;}
+.tcard-selects select,.tcard-selects input[type=number]{background:var(--bg3);border:1px solid var(--border2);border-radius:3px;padding:2px 5px;color:var(--txt1);font-family:var(--mono);font-size:8px;}
+.tcard-acts{display:flex;gap:2px;margin-left:auto;}
+.tcard-note{font-family:var(--mono);font-size:9px;color:var(--txt3);padding:3px 6px;background:var(--bg3);border-radius:3px;border-left:2px solid var(--amber3);margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+/* CONFIG EDITOR MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(3px);z-index:200;display:flex;align-items:center;justify-content:center;}
+.modal{background:var(--bg1);border:1px solid var(--border2);border-radius:8px;width:680px;max-width:96vw;max-height:88vh;display:flex;flex-direction:column;}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);}
+.modal-title{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--txt0);}
+.modal-body{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:8px;}
+.modal-footer{display:flex;justify-content:flex-end;gap:6px;padding:10px 14px;border-top:1px solid var(--border);}
+.cfg-editor{flex:1;background:var(--bg0);border:1px solid var(--border2);border-radius:5px;padding:10px;color:var(--green);font-family:var(--mono);font-size:11px;resize:none;line-height:1.6;min-height:300px;}
+.cfg-editor:focus{outline:none;border-color:var(--blue3);}
+.cfg-note-input{background:var(--bg2);border:1px solid var(--border2);border-radius:4px;padding:6px 10px;color:var(--txt1);font-family:var(--mono);font-size:11px;width:100%;}
+.cfg-note-input:focus{outline:none;border-color:var(--amber3);}
+/* SETTINGS */
+.ss-section{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin-bottom:8px;}
+.ss-title{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--txt2);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:7px;}
+.ss-row{display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);}
+.ss-row:last-child{border-bottom:none;padding-bottom:0;}
+.ss-row-l{display:flex;flex-direction:column;gap:1px;}
+.ss-row-name{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--txt1);}
+.ss-row-desc{font-family:var(--mono);font-size:8px;color:var(--txt3);}
+.ss-row-r{display:flex;align-items:center;gap:7px;flex-shrink:0;}
+.ss-inp{background:var(--bg3);border:1px solid var(--border2);border-radius:3px;padding:4px 7px;color:var(--txt1);font-family:var(--mono);font-size:10px;}
+.ss-inp:focus{outline:none;border-color:var(--blue3);}
+.ss-sel{background:var(--bg3);border:1px solid var(--border2);border-radius:3px;padding:4px 7px;color:var(--txt1);font-family:var(--mono);font-size:10px;}
+/* STATS TAB */
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;}
+.stats-card{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:10px 12px;}
+.stats-card-title{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--txt3);margin-bottom:8px;}
+.stats-row{display:flex;align-items:center;gap:6px;padding:3px 0;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:10px;}
+.stats-row:last-child{border-bottom:none;}
+.stats-row-name{flex:1;color:var(--txt2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.stats-row-val{font-weight:700;color:var(--txt0);}
+.stats-row-val.green{color:var(--green);} .stats-row-val.red{color:var(--red);} .stats-row-val.amber{color:var(--amber);}
+.bar-wrap{display:flex;align-items:flex-end;gap:2px;height:40px;margin-top:6px;}
+.bar-item{border-radius:2px 2px 0 0;background:var(--blue);opacity:.7;transition:opacity .2s;min-width:8px;flex:1;cursor:default;}
+.bar-item:hover{opacity:1;}
+.bar-labels{display:flex;justify-content:space-between;font-family:var(--mono);font-size:8px;color:var(--txt4);margin-top:2px;}
+.uptime-row{display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:10px;}
+.uptime-row:last-child{border-bottom:none;}
+.uptime-bar-wrap{flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden;}
+.uptime-bar{height:6px;border-radius:3px;background:var(--green);}
+/* RIGHT COL */
+.r-top{flex:0 0 auto;max-height:40%;border-bottom:1px solid var(--border);overflow:hidden;display:flex;flex-direction:column;}
+.r-bot{flex:1;overflow:hidden;display:flex;flex-direction:column;}
+.cron-card{background:var(--bg2);border:1px solid var(--border);border-radius:5px;padding:5px 9px;margin-bottom:4px;display:flex;align-items:center;gap:6px;}
+.cron-expr{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--green);min-width:90px;}
+.cron-info{flex:1;min-width:0;}
+.cron-desc{font-size:10px;font-weight:600;color:var(--txt1);}
+.cron-next{font-size:8px;color:var(--txt3);font-family:var(--mono);}
+.on-badge{font-size:8px;font-weight:700;padding:1px 4px;border-radius:6px;text-transform:uppercase;font-family:var(--mono);background:var(--green3);color:var(--green);}
+.cron-form{display:grid;grid-template-columns:1fr auto auto;gap:3px;margin-top:6px;}
+.cron-inp,.cron-sel{background:var(--bg2);border:1px solid var(--border2);border-radius:4px;padding:4px 6px;color:var(--txt1);font-family:var(--mono);font-size:10px;}
+.log-wrap{flex:1;overflow-y:auto;padding:5px 9px;font-family:var(--mono);font-size:9px;}
+.log-line{display:flex;gap:6px;padding:2px 0;border-bottom:1px solid rgba(255,255,255,.015);}
+.log-t{color:var(--txt4);min-width:46px;flex-shrink:0;}
+.log-m.ok{color:var(--green);} .log-m.warn{color:var(--amber);} .log-m.err{color:var(--red);font-weight:700;} .log-m.info{color:var(--blue);}
+.more{text-align:center;font-family:var(--mono);font-size:8px;color:var(--txt4);padding:5px 0;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes spin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
 <div class="app">
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="logo">VPN<em>CTL</em></div>
+  <div class="pill"><div class="dot green" id="top-dot"></div><span id="top-active">0</span> active · <span id="top-total">0</span> total</div>
+  <div class="pill" id="ks-pill"><div class="dot off" id="ks-dot"></div>KS <span id="ks-state">off</span></div>
+  <div class="spacer"></div>
+  <div class="pill">IP <span id="top-ip">—</span></div>
+  <div class="pill">↓ <span id="top-rx">0 B/s</span> ↑ <span id="top-tx">0 B/s</span></div>
+  <div class="pill">uptime <span id="top-uptime">—</span></div>
+</div>
+<!-- ALERT BAR -->
+<div class="alert-bar" id="ks-alert"><span>🔒</span><span class="msg" id="ks-alert-msg">Kill Switch ACTIVE</span><button class="btn btn-r" onclick="ksDisarm()">Disable</button></div>
+<!-- STATSBAR -->
+<div class="statsbar">
+  <div class="stat"><div class="stat-lbl">Active</div><div class="stat-val green" id="s-active">0<span class="u">/0</span></div><div class="stat-sub" id="s-stopped">0 stopped</div></div>
+  <div class="stat"><div class="stat-lbl">Download</div><div class="stat-val blue" id="s-rx">0<span class="u">B/s</span></div><div class="stat-sub" id="s-rx-tot">0 B session</div></div>
+  <div class="stat"><div class="stat-lbl">Upload</div><div class="stat-val green" id="s-tx">0<span class="u">B/s</span></div><div class="stat-sub" id="s-tx-tot">0 B session</div></div>
+  <div class="stat"><div class="stat-lbl">Best Speed</div><div class="stat-val purple" id="s-best">—</div><div class="stat-sub" id="s-best-name">—</div></div>
+  <div class="stat"><div class="stat-lbl">Avg Ping</div><div class="stat-val cyan" id="s-ping">—</div><div class="stat-sub" id="s-loss">—</div></div>
+  <div class="stat"><div class="stat-lbl">Avg MTU</div><div class="stat-val" id="s-mtu">—</div><div class="stat-sub" id="s-mtu-sub">—</div></div>
+  <div class="stat"><div class="stat-lbl">Auto-Restarts</div><div class="stat-val amber" id="s-restarts">0</div><div class="stat-sub">today</div></div>
+  <div class="stat"><div class="stat-lbl">App Uptime</div><div class="stat-val" id="s-uptime">—</div><div class="stat-sub">from process start</div></div>
+</div>
+<!-- TABBAR -->
+<div class="tabbar">
+  <div class="tab active" onclick="sw('tunnels',this)">Tunnels<span class="tbadge b" id="tab-tun-badge">0</span></div>
+  <div class="tab" onclick="sw('stats',this)">Stats &amp; History</div>
+  <div class="tab" onclick="sw('settings',this)">Settings</div>
+</div>
+<!-- CONTENT -->
+<div class="content" style="flex:1;overflow:hidden;">
+<div class="left-col">
 
-  <!-- topbar -->
-  <div class="topbar">
-    <div class="logo">VPN<em>CTL</em></div>
-    <div class="topbar-meta">
-      <span id="active-count"><span class="pulse"></span>0 active</span>
-      <span id="server-ip">—</span>
+<!-- TUNNELS TAB -->
+<div class="tab-panel active" id="tp-tunnels">
+<div class="panel">
+  <div class="ph">
+    <span class="ph-title">OpenVPN Tunnels</span>
+    <div class="ph-actions">
+      <button class="btn btn-c" onclick="speedTestAll()">⚡ Test All</button>
+      <button class="btn btn-b" onclick="mtuAll()">📐 MTU All</button>
+      <button class="btn btn-ghost" onclick="toggleImport()">↓ URL Import</button>
+      <select id="sort-sel" onchange="renderTunnels()" style="background:var(--bg2);border:1px solid var(--border2);border-radius:3px;padding:3px 6px;color:var(--txt1);font-size:9px;">
+        <option value="speed">↓ Speed</option><option value="rx">↓ RX</option><option value="ping">↓ Ping</option>
+      </select>
     </div>
   </div>
+  <div class="pb">
+    <!-- URL import box -->
+    <div id="import-box" style="display:none;background:var(--bg2);border:1px solid var(--blue3);border-radius:5px;padding:8px 10px;margin-bottom:8px;">
+      <div class="sec-lbl" style="margin-bottom:5px;">Import .ovpn from URL</div>
+      <div style="display:flex;gap:5px;">
+        <input type="text" id="import-url" style="flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:3px;padding:5px 8px;color:var(--txt1);font-size:11px;" placeholder="https://example.com/config.ovpn">
+        <button class="btn btn-b" onclick="importURL()">Download &amp; Add</button>
+        <button class="btn btn-ghost" onclick="toggleImport()">✕</button>
+      </div>
+    </div>
+    <!-- Upload -->
+    <div class="upload-zone" onclick="document.getElementById('file-input').click()">↑ drop .ovpn files here — or click to browse</div>
+    <input type="file" id="file-input" accept=".ovpn" multiple style="display:none" onchange="uploadFiles(this.files)">
+    <!-- Group filter -->
+    <div style="display:flex;align-items:center;gap:4px;margin-bottom:8px;flex-wrap:wrap;">
+      <span style="font-family:var(--mono);font-size:9px;color:var(--txt4);">GROUP:</span>
+      <button class="btn btn-b" id="grp-all" style="padding:2px 7px;font-size:8px;" onclick="setGroup('')">All</button>
+      <div id="group-buttons"></div>
+      <button class="btn btn-ghost" style="padding:2px 7px;font-size:8px;color:var(--green);" onclick="addGroup()">+ Group</button>
+    </div>
+    <!-- DNS/IP bar -->
+    <div style="display:flex;gap:5px;margin-bottom:8px;flex-wrap:wrap;" id="ip-bar">
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:3px 9px;font-family:var(--mono);font-size:9px;color:var(--txt3);">IP: <span id="ip-bar-ip" style="color:var(--txt2);">—</span></div>
+      <button class="btn btn-ghost" style="font-size:8px;" onclick="ipCheck()">↺ Check IP</button>
+    </div>
+    <!-- Tunnel list -->
+    <div id="tunnel-list"></div>
+    <div class="more" id="more-tunnels" style="display:none"></div>
+  </div>
+</div>
+</div>
 
-  <!-- stats bar -->
-  <div class="statsbar">
-    <div class="stat-box">
-      <div class="stat-label">Tunnels</div>
-      <div class="stat-value" id="s-tunnels">0<span class="unit">active</span></div>
+<!-- STATS TAB -->
+<div class="tab-panel" id="tp-stats">
+<div class="panel">
+  <div class="ph"><span class="ph-title">Stats &amp; History</span></div>
+  <div class="pb">
+    <div class="stats-grid" id="stats-grid"></div>
+    <!-- Traffic chart -->
+    <div class="stats-card" style="margin-bottom:8px;">
+      <div class="stats-card-title">📈 Daily Traffic — Last 7 Days</div>
+      <div class="bar-wrap" id="traffic-chart"></div>
+      <div class="bar-labels" id="traffic-labels"></div>
     </div>
-    <div class="stat-box">
-      <div class="stat-label">Total RX</div>
-      <div class="stat-value blue" id="s-rx">0<span class="unit">B/s</span></div>
-    </div>
-    <div class="stat-box">
-      <div class="stat-label">Total TX</div>
-      <div class="stat-value green" id="s-tx">0<span class="unit">B/s</span></div>
-    </div>
-    <div class="stat-box">
-      <div class="stat-label">Uptime</div>
-      <div class="stat-value" id="s-uptime">—</div>
+    <!-- Backup/Restore -->
+    <div class="stats-card">
+      <div class="stats-card-title">💾 Backup &amp; Restore</div>
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+        <a class="btn btn-g" href="/api/backup" download>📦 Export</a>
+        <button class="btn btn-b" onclick="document.getElementById('restore-input').click()">📂 Import</button>
+        <input type="file" id="restore-input" accept=".zip" style="display:none" onchange="restoreBackup(this.files[0])">
+      </div>
     </div>
   </div>
+</div>
+</div>
 
-  <!-- main -->
-  <div class="content">
+<!-- SETTINGS TAB -->
+<div class="tab-panel" id="tp-settings">
+<div class="panel">
+  <div class="ph"><span class="ph-title">Settings</span><button class="btn btn-g" onclick="saveSettings()">💾 Save All</button></div>
+  <div class="pb" id="settings-body"></div>
+</div>
+</div>
 
-    <!-- left: tunnels -->
-    <div class="left-col">
-      <div class="panel">
-        <div class="panel-header">
-          <span class="panel-title">Tunnel Configurations</span>
-        </div>
-        <div class="panel-body">
+</div><!-- /left-col -->
 
-          <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-            click or drag .ovpn files here
-          </div>
-          <input type="file" id="fileInput" accept=".ovpn" multiple>
-
-          <div id="tunnelList"></div>
-        </div>
+<!-- RIGHT COL -->
+<div class="right-col">
+  <div class="r-top">
+    <div class="ph"><span class="ph-title">Scheduled Restarts</span></div>
+    <div class="pb">
+      <div id="cron-list"></div>
+      <div class="divider"></div>
+      <div class="cron-form">
+        <input type="text" class="cron-inp" id="cron-expr" placeholder="*/30 * * * *">
+        <select class="cron-sel" id="cron-target"><option value="all">all</option></select>
+        <button class="btn btn-g" onclick="cronAdd()">+</button>
       </div>
-    </div>
-
-    <!-- right col -->
-    <div class="right-col">
-
-      <!-- cron -->
-      <div class="panel">
-        <div class="panel-header">
-          <span class="panel-title">Scheduled Restarts</span>
-        </div>
-        <div class="panel-body">
-          <div id="cronList"></div>
-          <div class="divider"></div>
-          <div class="cron-form">
-            <input type="text" id="cronExpr" placeholder="*/30 * * * *" title="cron expression">
-            <select id="cronTarget">
-              <option value="all">all</option>
-            </select>
-            <button class="btn btn-add" onclick="addCron()">+ Add</button>
-          </div>
-          <div style="font-size:10px;color:var(--txt3);margin-top:6px;font-family:var(--mono);">
-            min &nbsp; hour &nbsp; dom &nbsp; month &nbsp; dow &nbsp;—&nbsp; e.g. */30 * * * *
-          </div>
-        </div>
-      </div>
-
-      <!-- logs -->
-      <div class="panel">
-        <div class="panel-header">
-          <span class="panel-title">Event Log</span>
-          <button class="btn btn-delete btn-sm" onclick="clearLogs()">Clear</button>
-        </div>
-        <div class="log-wrap" id="logList"></div>
-      </div>
-
+      <div style="font-size:8px;color:var(--txt4);margin-top:3px;font-family:var(--mono);">min · hour · dom · month · dow</div>
     </div>
   </div>
+  <div class="r-bot">
+    <div class="ph"><span class="ph-title">Event Log</span><button class="btn btn-ghost" style="font-size:8px;" onclick="clearLogs()">Clear</button></div>
+    <div class="log-wrap" id="log-wrap"></div>
+  </div>
+</div>
+
+</div><!-- /content -->
+</div><!-- /app -->
+
+<!-- CONFIG EDITOR MODAL -->
+<div class="modal-overlay" id="editor-modal" style="display:none" onclick="if(event.target===this)hideEditor()">
+<div class="modal">
+  <div class="modal-header">
+    <div class="modal-title" id="editor-title">✏️ Edit Config</div>
+    <button class="btn btn-ghost" onclick="hideEditor()">✕</button>
+  </div>
+  <div class="modal-body">
+    <div style="font-family:var(--mono);font-size:9px;color:var(--txt3);">Changes are saved directly to disk</div>
+    <textarea class="cfg-editor" id="cfg-editor" rows="16"></textarea>
+    <div>
+      <div class="sec-lbl">Note (optional)</div>
+      <input type="text" class="cfg-note-input" id="cfg-note" placeholder="e.g. server location, cost, notes…">
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-ghost" onclick="hideEditor()">Cancel</button>
+    <button class="btn btn-a" onclick="saveConfigAndRestart()">💾 Save &amp; Restart</button>
+    <button class="btn btn-g" onclick="saveConfig()">💾 Save</button>
+  </div>
+</div>
 </div>
 
 <script>
 // ── State ─────────────────────────────────────────────────────────────────────
-const startedAt = Date.now();
-let tunnels = [];
-let logs = [];
-let localLogs = [];
+let S = { tunnels:[], logs:[], settings:{}, cronJobs:[], trafficHistory:[], startedAt:null, externalIP:'', killSwitchArmed:false, groups:[] };
+let activeGroup = '';
+let editorIndex = -1;
+const MAX_VISIBLE = 25;
 
-// ── Fetch helpers ─────────────────────────────────────────────────────────────
-async function api(url, opts) {
-  const r = await fetch(url, opts);
-  const j = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(j.error || r.statusText);
-  return j;
-}
-
-// ── Poll ──────────────────────────────────────────────────────────────────────
+// ── Polling ───────────────────────────────────────────────────────────────────
 async function poll() {
   try {
-    const data = await api('/api/stats');
-    tunnels = data.tunnels || [];
-    logs = data.logs || [];
+    const r = await fetch('/api/stats');
+    if (!r.ok) return;
+    const d = await r.json();
+    S.tunnels = d.tunnels || [];
+    S.logs = d.logs || [];
+    S.settings = d.settings || {};
+    S.cronJobs = d.cron_jobs || [];
+    S.trafficHistory = d.traffic_history || [];
+    S.startedAt = d.started_at;
+    S.externalIP = d.external_ip || '';
+    S.killSwitchArmed = d.kill_switch_armed || false;
+    S.groups = d.groups || [];
     render();
-  } catch(e) { console.error('poll:', e); }
+  } catch(e) {}
 }
-
-setInterval(poll, 2000);
+setInterval(poll, 2500);
 poll();
 
-// ── Upload ─────────────────────────────────────────────────────────────────────
-document.getElementById('fileInput').addEventListener('change', async e => {
-  for (const f of e.target.files) await uploadFile(f);
-  e.target.value = '';
-});
-
-const dz = document.getElementById('dropZone');
-dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag'); });
-dz.addEventListener('dragleave', () => dz.classList.remove('drag'));
-dz.addEventListener('drop', async e => {
-  e.preventDefault(); dz.classList.remove('drag');
-  for (const f of e.dataTransfer.files) await uploadFile(f);
-});
-
-async function uploadFile(file) {
-  const fd = new FormData();
-  fd.append('config', file);
-  try {
-    await api('/api/tunnels/upload', { method: 'POST', body: fd });
-    await poll();
-  } catch(e) { alert('Upload failed: ' + e.message); }
-}
-
-// ── Tunnel actions ─────────────────────────────────────────────────────────────
-async function tunStart(i)   { await api('/api/tunnels/start?index='+i);   await poll(); }
-async function tunStop(i)    { await api('/api/tunnels/stop?index='+i);    await poll(); }
-async function tunRestart(i) { await api('/api/tunnels/restart?index='+i); await poll(); }
-async function tunDelete(i) {
-  if (!confirm('Delete this config?')) return;
-  await api('/api/tunnels/delete?index='+i, { method: 'POST' });
-  await poll();
-}
-async function tunToggleAR(i, val) {
-  await api('/api/tunnels/autoreconnect?index='+i+'&enabled='+val);
-  await poll();
-}
-
-// ── Cron ──────────────────────────────────────────────────────────────────────
-async function loadCron() {
-  const jobs = await api('/api/cron');
-  renderCron(jobs);
-}
-
-async function addCron() {
-  const expr = document.getElementById('cronExpr').value.trim();
-  const target = document.getElementById('cronTarget').value;
-  if (!expr) return;
-  try {
-    await api('/api/cron/add', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ expression: expr, target, action: 'restart' })
-    });
-    document.getElementById('cronExpr').value = '';
-    await loadCron();
-  } catch(e) { alert('Cron error: ' + e.message); }
-}
-
-async function deleteCron(id) {
-  await api('/api/cron/delete?id='+id);
-  await loadCron();
-}
-
-loadCron();
-setInterval(loadCron, 10000);
-
-function clearLogs() { localLogs = []; logs = []; renderLogs(); }
-
-// ── Formatters ────────────────────────────────────────────────────────────────
-function fmtRate(bps) {
-  if (bps <= 0) return '—';
-  if (bps < 1024) return bps.toFixed(0) + ' B/s';
-  if (bps < 1048576) return (bps/1024).toFixed(1) + ' KB/s';
-  return (bps/1048576).toFixed(2) + ' MB/s';
-}
-
+// ── Format ────────────────────────────────────────────────────────────────────
 function fmtBytes(b) {
-  if (b < 1024) return b + ' B';
-  if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
-  if (b < 1073741824) return (b/1048576).toFixed(1) + ' MB';
-  return (b/1073741824).toFixed(2) + ' GB';
+  if (!b) return '0 B';
+  if (b>=1e9) return (b/1e9).toFixed(1)+' GB';
+  if (b>=1e6) return (b/1e6).toFixed(1)+' MB';
+  if (b>=1e3) return (b/1e3).toFixed(0)+' KB';
+  return b+' B';
 }
-
-function fmtUptime(ms) {
-  const s = Math.floor(ms/1000);
-  const h = Math.floor(s/3600);
-  const m = Math.floor((s%3600)/60);
-  if (h > 0) return h+'h '+m+'m';
-  return m+'m '+(s%60)+'s';
+function fmtRate(r) {
+  if (!r) return '0 B/s';
+  if (r>=1e6) return (r/1e6).toFixed(1)+' MB/s';
+  if (r>=1e3) return (r/1e3).toFixed(0)+' KB/s';
+  return r.toFixed(0)+' B/s';
 }
-
-function fmtNextRun(iso) {
-  const d = new Date(iso);
-  const diff = d - Date.now();
-  if (diff < 0) return 'soon';
-  const m = Math.floor(diff/60000);
-  const h = Math.floor(m/60);
-  if (h > 0) return 'in '+h+'h '+(m%60)+'m';
-  return 'in '+m+'m';
+function fmtUptime(since) {
+  if (!since) return '—';
+  const s = Math.floor((Date.now()-new Date(since).getTime())/1000);
+  if (s<0) return '—';
+  const h=Math.floor(s/3600), m=Math.floor((s%3600)/60), sec=s%60;
+  if (h>0) return h+'h '+m+'m';
+  if (m>0) return m+'m '+sec+'s';
+  return sec+'s';
 }
-
-function fmtTime(iso) {
-  const d = new Date(iso);
-  return d.toTimeString().slice(0,8);
+function fmtUptimeLong(since) {
+  if (!since) return '—';
+  const s = Math.floor((Date.now()-new Date(since).getTime())/1000);
+  if (s<0) return '—';
+  const h=Math.floor(s/3600), m=Math.floor((s%3600)/60), sec=s%60;
+  return (h?h+'h ':'')+m+'m '+sec+'s';
 }
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function speedClass(mbps){
+  if (!mbps||mbps<=0) return 'sb-none';
+  if (mbps>=50) return 'sb-fast';
+  if (mbps>=15) return 'sb-med';
+  return 'sb-slow';
+}
+function speedLabel(mbps){
+  if (!mbps||mbps<=0) return 'no data';
+  if (mbps>=50) return '⚡ '+mbps.toFixed(0)+' Mbps';
+  if (mbps>=15) return '~ '+mbps.toFixed(0)+' Mbps';
+  return '✗ '+mbps.toFixed(0)+' Mbps';
+}
+function pingClass(ms){ if (!ms) return 'na'; if (ms<60) return 'pg'; if (ms<150) return 'pw'; return 'pb'; }
 
 // ── Render ────────────────────────────────────────────────────────────────────
 function render() {
-  renderStats();
-  renderTunnels();
-  renderLogs();
+  renderTopbar(); renderStats(); renderTunnels(); renderLogs(); renderCron(); renderGroupButtons(); renderIPBar();
+}
+
+function renderTopbar() {
+  const active = S.tunnels.filter(t=>t.status==='connected').length;
+  document.getElementById('top-active').textContent = active;
+  document.getElementById('top-total').textContent = S.tunnels.length;
+  document.getElementById('top-uptime').textContent = fmtUptimeLong(S.startedAt);
+  document.getElementById('top-ip').textContent = S.externalIP || '—';
+  let totalRx=0, totalTx=0;
+  S.tunnels.forEach(t=>{totalRx+=t.rx_rate||0; totalTx+=t.tx_rate||0;});
+  document.getElementById('top-rx').textContent = fmtRate(totalRx);
+  document.getElementById('top-tx').textContent = fmtRate(totalTx);
+  // Kill switch
+  const ksPill = document.getElementById('ks-pill');
+  const ksDot = document.getElementById('ks-dot');
+  const ksState = document.getElementById('ks-state');
+  const ksAlert = document.getElementById('ks-alert');
+  if (S.killSwitchArmed) {
+    ksPill.className='pill ks-on'; ksDot.className='dot amber'; ksState.textContent='ARMED';
+    ksAlert.classList.add('show');
+  } else {
+    ksPill.className='pill'; ksDot.className='dot off'; ksState.textContent='off';
+    ksAlert.classList.remove('show');
+  }
 }
 
 function renderStats() {
-  const active = tunnels.filter(t => t.status === 'connected').length;
-  let totalRx = 0, totalTx = 0;
-  tunnels.forEach(t => { totalRx += t.rx_rate||0; totalTx += t.tx_rate||0; });
-
-  document.getElementById('s-tunnels').innerHTML = active + '<span class="unit">active</span>';
-  document.getElementById('s-rx').innerHTML = fmtRate(totalRx).replace(' ', '<span class="unit">') + '</span>';
-  document.getElementById('s-tx').innerHTML = fmtRate(totalTx).replace(' ', '<span class="unit">') + '</span>';
-  document.getElementById('s-uptime').textContent = fmtUptime(Date.now() - startedAt);
-  document.getElementById('active-count').innerHTML = '<span class="pulse"></span>' + active + ' active';
-
-  // update cron target select
-  const sel = document.getElementById('cronTarget');
-  const cur = sel.value;
-  sel.innerHTML = '<option value="all">all</option>';
-  tunnels.forEach(t => {
-    const o = document.createElement('option');
-    o.value = t.tun_dev; o.textContent = t.tun_dev;
-    sel.appendChild(o);
+  const tunnels = S.tunnels;
+  const active = tunnels.filter(t=>t.status==='connected').length;
+  const stopped = tunnels.length - active;
+  document.getElementById('s-active').innerHTML = active+'<span class="u">/'+tunnels.length+'</span>';
+  document.getElementById('s-stopped').textContent = stopped+' stopped';
+  let totalRx=0,totalTx=0,totalRxB=0,totalTxB=0,pingSum=0,pingCnt=0,mtuSum=0,mtuCnt=0,restarts=0;
+  tunnels.forEach(t=>{
+    totalRx+=t.rx_rate||0; totalTx+=t.tx_rate||0; totalRxB+=t.rx_bytes||0; totalTxB+=t.tx_bytes||0;
+    if (t.perf&&t.perf.ping_ms>0){pingSum+=t.perf.ping_ms;pingCnt++;}
+    if (t.perf&&t.perf.mtu>0){mtuSum+=t.perf.mtu;mtuCnt++;}
+    if (t.perf) restarts+=t.perf.restart_count||0;
   });
-  if ([...sel.options].some(o => o.value === cur)) sel.value = cur;
+  document.getElementById('s-rx').innerHTML=fmtRate(totalRx).replace(' ','<span class="u">')+' </span>';
+  document.getElementById('s-tx').innerHTML=fmtRate(totalTx).replace(' ','<span class="u">')+' </span>';
+  document.getElementById('s-rx-tot').textContent='↓ '+fmtBytes(totalRxB)+' session';
+  document.getElementById('s-tx-tot').textContent='↑ '+fmtBytes(totalTxB)+' session';
+  const connected=tunnels.filter(t=>t.status==='connected');
+  if (connected.length) {
+    const best=connected.reduce((a,b)=>(b.perf&&b.perf.speed_mbps||0)>(a.perf&&a.perf.speed_mbps||0)?b:a);
+    document.getElementById('s-best').textContent=best.tun_dev;
+    document.getElementById('s-best-name').textContent=(best.perf&&best.perf.speed_mbps>0?best.perf.speed_mbps.toFixed(0)+' Mbps':'—');
+  }
+  document.getElementById('s-ping').textContent=pingCnt?Math.round(pingSum/pingCnt)+'<span class="u">ms</span>':'—';
+  document.getElementById('s-loss').textContent=pingCnt?'avg '+pingCnt+' tunnels':'—';
+  document.getElementById('s-mtu').textContent=mtuCnt?Math.round(mtuSum/mtuCnt):'—';
+  document.getElementById('s-mtu-sub').textContent=mtuCnt?mtuCnt+' detected':'none';
+  document.getElementById('s-restarts').textContent=restarts;
+  document.getElementById('s-uptime').textContent=fmtUptimeLong(S.startedAt);
+  document.getElementById('tab-tun-badge').textContent=active;
+  renderStatsTab();
 }
 
 function renderTunnels() {
-  const list = document.getElementById('tunnelList');
-  if (!tunnels.length) {
-    list.innerHTML = '<div style="color:var(--txt3);text-align:center;padding:24px 0;font-family:var(--mono);font-size:12px;">no configs — upload an .ovpn file</div>';
-    return;
-  }
-  list.innerHTML = tunnels.map(t => {
-    const st = t.status;
-    const isOn = st === 'connected';
-    const isPending = st === 'connecting' || st === 'reconnecting';
-    const isOff = st === 'disconnected';
-
-    const trafficHtml = isOn
-      ? `<div class="traf-rx">↓ ${fmtRate(t.rx_rate)}</div><div class="traf-tx">↑ ${fmtRate(t.tx_rate)}</div>`
-      : `<div class="traf-na">—</div>`;
-
-    const actionBtn = isOn || isPending
-      ? `<button class="btn btn-stop btn-sm" onclick="tunStop(${t.index})">Stop</button>`
-      : `<button class="btn btn-start btn-sm" onclick="tunStart(${t.index})">Start</button>`;
-
-    const arLabel = t.auto_reconnect ? 'AR:ON' : 'AR:OFF';
-    const arColor = t.auto_reconnect ? 'var(--green)' : 'var(--txt3)';
-
-    return `<div class="tunnel-card ${st}">
-      <div class="tun-badge ${isOff&&!isPending?'off':''}">${t.tun_dev}</div>
-      <div class="tun-info">
-        <div class="tun-name">${t.name}</div>
-        <div class="tun-meta">${t.config_file} &nbsp;·&nbsp; <span style="color:${st==='connected'?'var(--green)':st==='reconnecting'?'var(--amber)':'var(--red)'}; font-weight:700;">${st}</span></div>
-      </div>
-      <div class="tun-traffic">${trafficHtml}</div>
-      <div class="tun-actions">
-        <span class="status-dot ${st}"></span>
-        ${actionBtn}
-        <button class="btn btn-restart btn-sm" onclick="tunRestart(${t.index})" title="Restart">↺</button>
-        <button class="btn btn-delete btn-sm" onclick="tunToggleAR(${t.index},${!t.auto_reconnect})" style="color:${arColor};border-color:${arColor}22" title="Toggle auto-reconnect">${arLabel}</button>
-        <button class="btn btn-delete btn-sm" onclick="tunDelete(${t.index})" title="Delete">✕</button>
-      </div>
-    </div>`;
-  }).join('');
+  let tunnels=[...S.tunnels];
+  if (activeGroup) tunnels=tunnels.filter(t=>t.cfg&&t.cfg.group===activeGroup);
+  const sort=document.getElementById('sort-sel').value;
+  if (sort==='speed') tunnels.sort((a,b)=>(b.perf&&b.perf.speed_mbps||0)-(a.perf&&a.perf.speed_mbps||0));
+  else if (sort==='rx') tunnels.sort((a,b)=>(b.rx_bytes||0)-(a.rx_bytes||0));
+  else if (sort==='ping') tunnels.sort((a,b)=>{
+    const pa=a.perf&&a.perf.ping_ms||9999; const pb2=b.perf&&b.perf.ping_ms||9999; return pa-pb2;
+  });
+  const visible=tunnels.slice(0,MAX_VISIBLE);
+  const list=document.getElementById('tunnel-list');
+  list.innerHTML=visible.map(t=>renderTunnelCard(t)).join('');
+  // Update cron target select
+  const sel=document.getElementById('cron-target');
+  const existing=Array.from(sel.options).map(o=>o.value);
+  S.tunnels.forEach(t=>{if(!existing.includes(t.tun_dev)){const o=document.createElement('option');o.value=t.tun_dev;o.textContent=t.tun_dev;sel.appendChild(o);}});
+  const more=document.getElementById('more-tunnels');
+  if (tunnels.length>MAX_VISIBLE){more.style.display='';more.textContent='+ '+(tunnels.length-MAX_VISIBLE)+' more…';}
+  else{more.style.display='none';}
 }
 
-function renderCron(jobs) {
-  const list = document.getElementById('cronList');
-  if (!jobs || !jobs.length) {
-    list.innerHTML = '<div style="color:var(--txt3);font-size:11px;font-family:var(--mono);padding:4px 0;">no scheduled jobs</div>';
-    return;
-  }
-  list.innerHTML = jobs.map(j => `
-    <div class="cron-card">
-      <div class="cron-expr">${j.expression}</div>
-      <div class="cron-info">
-        <div class="cron-desc">${j.action} · ${j.target}</div>
-        <div class="cron-next">next: ${fmtNextRun(j.next_run)}</div>
+function renderTunnelCard(t) {
+  const isConn=t.status==='connected', isOff=t.status==='disconnected';
+  const uptime=t.connected_at?fmtUptime(t.connected_at):'';
+  const perf=t.perf||{};
+  const cfg=t.cfg||{};
+  const speedMbps=perf.speed_mbps||0;
+  const note=cfg.note||'';
+  const proto=cfg.protocol||'udp';
+  const comp=cfg.compression||'none';
+  const bw=cfg.bandwidth_mb||0;
+  const group=cfg.group||'';
+  const mtu=perf.mtu||0;
+  const pingMs=perf.ping_ms||0;
+  const loss=perf.packet_loss||0;
+
+  return `<div class="tcard ${t.status}" id="tc-${t.index}">
+    <div class="tcard-r1">
+      <div class="tun-num ${isOff?'off':''}">${esc(t.tun_dev)}</div>
+      <div class="tun-name">${esc(t.name)}</div>
+      <span class="sb ${speedClass(speedMbps)}">${esc(speedLabel(speedMbps))}</span>
+      <span class="nbadge nb-${proto}">${proto.toUpperCase()}</span>
+      ${mtu>0?`<span class="nbadge nb-mtu">MTU ${mtu}</span>`:''}
+      ${comp!=='none'?`<span class="nbadge nb-comp">${comp.toUpperCase()}</span>`:''}
+      ${group?`<span class="nbadge" style="background:var(--amber4);color:var(--amber);border:1px solid var(--amber3);">${esc(group)}</span>`:''}
+      ${uptime?`<span style="font-family:var(--mono);font-size:9px;color:var(--txt4);">up ${uptime}</span>`:''}
+      <div class="sdot ${t.status}"></div>
+    </div>
+    ${note?`<div class="tcard-note">💬 ${esc(note)}</div>`:''}
+    <div class="tcard-metrics">
+      <div><div class="tc-ml">↓ DL</div><div class="tc-mv ${isConn?'rx':'na'}">${isConn?fmtRate(t.rx_rate||0):'—'}</div></div>
+      <div><div class="tc-ml">↑ UL</div><div class="tc-mv ${isConn?'tx':'na'}">${isConn?fmtRate(t.tx_rate||0):'—'}</div></div>
+      <div><div class="tc-ml">Ping</div><div class="tc-mv ${pingClass(pingMs)}">${pingMs>0?pingMs.toFixed(0)+' ms':'—'}</div></div>
+      <div><div class="tc-ml">Loss</div><div class="tc-mv ${pingClass(loss)}">${pingMs>0?loss.toFixed(0)+'%':'—'}</div></div>
+      <div><div class="tc-ml">Session</div><div class="tc-mv" style="color:var(--txt2);font-size:9px;">${(t.rx_bytes||0)>0?'↓'+fmtBytes(t.rx_bytes)+' ↑'+fmtBytes(t.tx_bytes):'—'}</div></div>
+    </div>
+    <div class="tcard-foot">
+      <div class="tcard-selects">
+        <select onchange="patchTunnelCfg(${t.index},'protocol',this.value)" title="Protocol">
+          <option value="udp" ${proto==='udp'?'selected':''}>UDP</option>
+          <option value="tcp" ${proto==='tcp'?'selected':''}>TCP</option>
+        </select>
+        <select onchange="patchTunnelCfg(${t.index},'compression',this.value)" title="Compression">
+          <option value="none" ${comp==='none'?'selected':''}>No Compress</option>
+          <option value="lz4-v2" ${comp==='lz4-v2'?'selected':''}>LZ4-v2</option>
+          <option value="stub" ${comp==='stub'?'selected':''}>Stub</option>
+        </select>
+        <input type="number" min="0" value="${bw}" title="Bandwidth limit MB/s (0=∞)"
+          style="width:44px;" onchange="patchTunnelCfg(${t.index},'bandwidth_mb',parseInt(this.value)||0)" placeholder="∞">
+        <select onchange="patchTunnelCfg(${t.index},'group',this.value)" title="Group">
+          <option value="">— group —</option>
+          ${S.groups.map(g=>`<option value="${esc(g)}" ${group===g?'selected':''}>${esc(g)}</option>`).join('')}
+        </select>
       </div>
-      <span class="badge ${j.enabled?'badge-green':'badge-red'}">${j.enabled?'on':'off'}</span>
-      <button class="btn btn-delete btn-sm" onclick="deleteCron(${j.id})">✕</button>
-    </div>`).join('');
+      <div class="tcard-acts">
+        <button class="btn btn-c" onclick="speedTest(${t.index})" title="Speed Test">⚡</button>
+        <button class="btn btn-b" onclick="mtuDetect(${t.index})" title="MTU Detect">📐</button>
+        <button class="btn btn-ghost" onclick="showEditor(${t.index})" title="Edit config">✏️</button>
+        ${isOff
+          ?`<button class="btn btn-g" onclick="tunnelStart(${t.index})">Start</button>`
+          :`<button class="btn btn-r" onclick="tunnelStop(${t.index})">Stop</button>`}
+        <button class="btn btn-a" onclick="tunnelRestart(${t.index})">↺</button>
+        <button class="btn btn-ghost" onclick="tunnelDelete(${t.index})">✕</button>
+      </div>
+    </div>
+  </div>`;
 }
 
 function renderLogs() {
-  const list = document.getElementById('logList');
-  const all = [...localLogs, ...logs];
-  if (!all.length) {
-    list.innerHTML = '<div class="log-empty">no events yet</div>';
-    return;
+  const wrap=document.getElementById('log-wrap');
+  wrap.innerHTML=S.logs.slice(0,100).map(l=>{
+    const t=new Date(l.time);
+    const ts=[t.getHours(),t.getMinutes(),t.getSeconds()].map(n=>n.toString().padStart(2,'0')).join(':');
+    return `<div class="log-line"><span class="log-t">${ts}</span><span class="log-m ${l.level}">${esc(l.message)}</span></div>`;
+  }).join('');
+}
+
+function renderCron() {
+  const list=document.getElementById('cron-list');
+  if (!S.cronJobs.length){list.innerHTML='<div style="font-family:var(--mono);font-size:9px;color:var(--txt4);padding:4px 0;">no schedules</div>';return;}
+  list.innerHTML=S.cronJobs.map(j=>`
+    <div class="cron-card">
+      <div class="cron-expr">${esc(j.expression)}</div>
+      <div class="cron-info"><div class="cron-desc">${j.action||'restart'} · ${esc(j.target)}</div><div class="cron-next">next: ${fmtUptime(j.next_run)}</div></div>
+      <span class="on-badge">on</span>
+      <button class="btn btn-ghost" onclick="cronDelete(${j.id})" style="padding:2px 5px;">✕</button>
+    </div>`).join('');
+}
+
+function renderGroupButtons() {
+  const wrap=document.getElementById('group-buttons');
+  wrap.innerHTML=S.groups.map(g=>`<button class="btn ${activeGroup===g?'btn-b':'btn-ghost'}" style="padding:2px 7px;font-size:8px;" onclick="setGroup('${esc(g)}')">${esc(g)}</button>`).join(' ');
+}
+
+function renderIPBar() {
+  document.getElementById('ip-bar-ip').textContent=S.externalIP||'—';
+}
+
+// ── Stats tab ─────────────────────────────────────────────────────────────────
+function renderStatsTab() {
+  const tunnels=S.tunnels;
+  const grid=document.getElementById('stats-grid');
+
+  // Monthly data usage
+  const usageMap={};
+  S.trafficHistory.forEach(d=>{
+    if (!usageMap[d.tun_dev]) usageMap[d.tun_dev]={rx:0,tx:0};
+    usageMap[d.tun_dev].rx+=d.rx_bytes||0;
+    usageMap[d.tun_dev].tx+=d.tx_bytes||0;
+  });
+  const usageSorted=Object.entries(usageMap).sort((a,b)=>(b[1].rx+b[1].tx)-(a[1].rx+a[1].tx)).slice(0,5);
+
+  // Speed results
+  const speedRows=tunnels.filter(t=>t.perf&&t.perf.speed_mbps>0).sort((a,b)=>b.perf.speed_mbps-a.perf.speed_mbps).slice(0,5);
+
+  // Uptime
+  const uptimeRows=tunnels.filter(t=>t.connected_at).sort((a,b)=>new Date(a.connected_at)-new Date(b.connected_at)).slice(0,5);
+
+  // Disconnect counts
+  const dcRows=tunnels.filter(t=>t.perf&&t.perf.restart_count>0).sort((a,b)=>b.perf.restart_count-a.perf.restart_count).slice(0,5);
+
+  grid.innerHTML=`
+    <div class="stats-card">
+      <div class="stats-card-title">📊 Data Usage (all time)</div>
+      ${usageSorted.length?usageSorted.map(([dev,u])=>`
+        <div class="stats-row"><span class="stats-row-name">${esc(dev)}</span><span class="stats-row-val green">${fmtBytes(u.rx+u.tx)}</span></div>`).join('')
+        :'<div style="font-family:var(--mono);font-size:9px;color:var(--txt4);">no data yet</div>'}
+    </div>
+    <div class="stats-card">
+      <div class="stats-card-title">⚡ Speed Test Results</div>
+      ${speedRows.length?speedRows.map(t=>`
+        <div class="stats-row"><span class="stats-row-name">${esc(t.tun_dev)} · ${esc(t.name)}</span>
+        <span class="stats-row-val ${t.perf.speed_mbps>=50?'green':t.perf.speed_mbps>=15?'amber':'red'}">${t.perf.speed_mbps.toFixed(0)} Mbps</span></div>`).join('')
+        :'<div style="font-family:var(--mono);font-size:9px;color:var(--txt4);">no speed tests yet</div>'}
+    </div>
+    <div class="stats-card">
+      <div class="stats-card-title">⏱ Connected Tunnels</div>
+      ${uptimeRows.length?uptimeRows.map(t=>`
+        <div class="uptime-row"><span style="font-family:var(--mono);font-size:9px;color:var(--txt2);min-width:34px;">${esc(t.tun_dev)}</span>
+        <div class="uptime-bar-wrap"><div class="uptime-bar" style="width:100%"></div></div>
+        <span style="font-family:var(--mono);font-size:9px;color:var(--green);min-width:40px;text-align:right;">${fmtUptime(t.connected_at)}</span></div>`).join('')
+        :'<div style="font-family:var(--mono);font-size:9px;color:var(--txt4);">no connected tunnels</div>'}
+    </div>
+    <div class="stats-card">
+      <div class="stats-card-title">🔄 Auto-Restarts (this hour)</div>
+      ${dcRows.length?dcRows.map(t=>`
+        <div class="stats-row"><span class="stats-row-name">${esc(t.tun_dev)} · ${esc(t.name)}</span>
+        <span class="stats-row-val ${t.perf.restart_count>3?'red':'amber'}">${t.perf.restart_count}×</span></div>`).join('')
+        :'<div style="font-family:var(--mono);font-size:9px;color:var(--txt4);">no auto-restarts</div>'}
+    </div>`;
+
+  renderTrafficChart();
+}
+
+function renderTrafficChart() {
+  const now=new Date();
+  const days=[];
+  for(let i=6;i>=0;i--){
+    const d=new Date(now); d.setDate(d.getDate()-i);
+    days.push(d.toISOString().slice(0,10));
   }
-  list.innerHTML = all.slice(0, 100).map(l =>
-    `<div class="log-line">
-      <span class="log-time">${fmtTime(l.time)}</span>
-      <span class="log-msg ${l.level}">${l.message}</span>
-    </div>`
-  ).join('');
+  const totals=days.map(day=>{
+    let total=0;
+    S.trafficHistory.filter(h=>h.date===day).forEach(h=>total+=h.rx_bytes+h.tx_bytes);
+    return total;
+  });
+  const max=Math.max(...totals,1);
+  const chart=document.getElementById('traffic-chart');
+  const labels=document.getElementById('traffic-labels');
+  chart.innerHTML=totals.map((v,i)=>`<div class="bar-item" style="height:${Math.max(3,Math.round(v/max*100))}%;background:${i===6?'var(--green)':'var(--blue)'}" title="${days[i]}: ${fmtBytes(v)}"></div>`).join('');
+  labels.innerHTML=days.map(d=>d.slice(5)).join('  ');
+}
+
+// ── Settings tab ──────────────────────────────────────────────────────────────
+function renderSettings() {
+  const s=S.settings;
+  if(!s||!s.speed_test) return;
+  const st=s.speed_test||{}, ar=s.auto_restart||{}, mtu=s.mtu||{}, ping=s.ping||{}, dns=s.dns||{}, ks=s.kill_switch||{}, wh=s.webhook||{}, def=s.defaults||{};
+  document.getElementById('settings-body').innerHTML=`
+    <div class="ss-section">
+      <div class="ss-title">⚙ OpenVPN — Embedded v2.6.9</div>
+      <div class="ss-row"><div class="ss-row-l"><div class="ss-row-name">Status</div><div class="ss-row-desc">bundled inside vpnctl binary — no installation needed</div></div><div class="ss-row-r"><span style="font-family:var(--mono);font-size:10px;color:var(--green);">✓ v2.6.9 ready</span></div></div>
+    </div>
+    <div class="ss-section">
+      <div class="ss-title">🔒 Kill Switch
+        <label class="tog"><input type="checkbox" id="ks-en" ${ks.enabled?'checked':''}><span class="tog-sl"></span></label>
+        <span class="tog-lbl ${ks.enabled?'on':''}" id="ks-lbl">${ks.enabled?'ENABLED':'DISABLED'}</span>
+      </div>
+      <div class="ss-row"><div class="ss-row-l"><div class="ss-row-name">Block internet when all tunnels down</div><div class="ss-row-desc">uses iptables DROP — requires root</div></div><div class="ss-row-r"><label class="tog"><input type="checkbox" id="ks-block" ${ks.enabled?'checked':''}><span class="tog-sl"></span></label></div></div>
+      <div class="ss-row"><div class="ss-row-l"><div class="ss-row-name">Allow LAN traffic</div><div class="ss-row-desc">192.168.x.x / 10.x.x.x bypass kill switch</div></div><div class="ss-row-r"><label class="tog"><input type="checkbox" id="ks-lan" ${ks.allow_lan?'checked':''}><span class="tog-sl"></span></label></div></div>
+    </div>
+    <div class="ss-section">
+      <div class="ss-title">⚡ Speed Test
+        <label class="tog"><input type="checkbox" id="st-en" ${st.enabled?'checked':''}><span class="tog-sl"></span></label>
+        <span class="tog-lbl ${st.enabled?'on':''}">${st.enabled?'ENABLED':'DISABLED'}</span>
+      </div>
+      <div class="ss-row"><div class="ss-row-l"><div class="ss-row-name">Test URL</div></div><div class="ss-row-r"><input class="ss-inp" id="st-url" type="text" value="${esc(st.url||'')}" style="width:210px;"></div></div>
+      <div class="ss-row"><div class="ss-row-l"><div class="ss-row-name">Test size</div></div><div class="ss-row-r"><select class="ss-sel" id="st-size"><option value="1" ${st.size_mb===1?'selected':''}>1 MB</option><option value="5" ${st.size_mb===5||!st.size_mb?'selected':''}>5 MB</option><option value="10" ${st.size_mb===10?'selected':''}>10 MB</option></select></div></div>
+      <div class="ss-row"><div class="ss-row-l"><div class="ss-row-name">Auto-test interval</div><div class="ss-row-desc">0 = manual only</div></div><div class="ss-row-r"><input class="ss-inp" id="st-int" type="number" value="${st.interval||0}" style="width:60px;"> <span style="font-size:9px;color:var(--txt3);">min</span></div></div>
+    </div>
+    <div class="ss-section">
+      <div class="ss-title">🔄 Auto-Restart Slow Tunnels
+        <label class="tog"><input type="checkbox" id="ar-en" ${ar.enabled?'checked':''}><span class="tog-sl"></span></label>
+        <span class="tog-lbl ${ar.enabled?'on':''}">${ar.enabled?'ENABLED':'DISABLED'}</span>
+      </div>
+      <div class="ss-row"><div class="ss-row-l"><div class="ss-row-name">Speed threshold</div><div class="ss-row-desc">restart if below this</div></div><div class="ss-row-r"><input class="ss-inp" id="ar-thr" type="number" value="${ar.threshold_mbps||10}" style="width:60px;"> <span style="font-size:9px;color:var(--txt3);">Mbps</span></div></div>
+      <div class="ss-row"><div class="ss-row-l"><div class="ss-row-name">Max restarts / tunnel / hour</div></div><div class="ss-row-r"><input class="ss-inp" id="ar-max" type="number" value="${ar.max_per_hour||3}" style="width:60px;"></div></div>
+      <div class="ss-row"><div class="ss-row-l"><div class="ss-row-name">Auto-switch UDP → TCP on fail</div><div class="ss-row-desc">after 3 UDP failures, retry with TCP</div></div><div class="ss-row-r"><label class="tog"><input type="checkbox" id="ar-tcp" ${ar.auto_switch_tcp?'checked':''}><span class="tog-sl"></span></label></div></div>
+    </div>
+    <div class="ss-section">
+      <div class="ss-title">📐 MTU Detection
+        <label class="tog"><input type="checkbox" id="mtu-en" ${mtu.enabled?'checked':''}><span class="tog-sl"></span></label>
+        <span class="tog-lbl ${mtu.enabled?'on':''}">${mtu.enabled?'ENABLED':'DISABLED'}</span>
+      </div>
+      <div class="ss-row"><div class="ss-row-l"><div class="ss-row-name">Ping target</div></div><div class="ss-row-r"><input class="ss-inp" id="mtu-tgt" type="text" value="${esc(mtu.ping_target||'8.8.8.8')}" style="width:110px;"></div></div>
+      <div class="ss-row"><div class="ss-row-l"><div class="ss-row-name">Detect on connect</div></div><div class="ss-row-r"><label class="tog"><input type="checkbox" id="mtu-doc" ${mtu.detect_on_connect?'checked':''}><span class="tog-sl"></span></label></div></div>
+      <div class="ss-row"><div class="ss-row-l"><div class="ss-row-name">Apply detected MTU</div></div><div class="ss-row-r"><label class="tog"><input type="checkbox" id="mtu-apply" ${mtu.apply?'checked':''}><span class="tog-sl"></span></label></div></div>
+    </div>
+    <div class="ss-section">
+      <div class="ss-title">📡 Ping &amp; Packet Loss
+        <label class="tog"><input type="checkbox" id="ping-en" ${ping.enabled?'checked':''}><span class="tog-sl"></span></label>
+        <span class="tog-lbl ${ping.enabled?'on':''}">${ping.enabled?'ENABLED':'DISABLED'}</span>
+      </div>
+      <div class="ss-row"><div class="ss-row-l"><div class="ss-row-name">Interval</div></div><div class="ss-row-r"><input class="ss-inp" id="ping-int" type="number" value="${ping.interval||30}" style="width:60px;"> <span style="font-size:9px;color:var(--txt3);">sec</span></div></div>
+      <div class="ss-row"><div class="ss-row-l"><div class="ss-row-name">Ping count per check</div></div><div class="ss-row-r"><input class="ss-inp" id="ping-cnt" type="number" value="${ping.count||4}" style="width:60px;"></div></div>
+    </div>
+    <div class="ss-section">
+      <div class="ss-title">🔍 IP Check
+        <label class="tog"><input type="checkbox" id="dns-en" ${dns.enabled?'checked':''}><span class="tog-sl"></span></label>
+        <span class="tog-lbl ${dns.enabled?'on':''}">${dns.enabled?'ENABLED':'DISABLED'}</span>
+      </div>
+      <div class="ss-row"><div class="ss-row-l"><div class="ss-row-name">Check URL</div></div><div class="ss-row-r"><input class="ss-inp" id="dns-url" type="text" value="${esc(dns.ip_check_url||'')}" style="width:180px;"></div></div>
+      <div class="ss-row"><div class="ss-row-l"><div class="ss-row-name">Check after tunnel connect</div></div><div class="ss-row-r"><label class="tog"><input type="checkbox" id="dns-coc" ${dns.check_on_connect?'checked':''}><span class="tog-sl"></span></label></div></div>
+    </div>
+    <div class="ss-section">
+      <div class="ss-title">🔔 Webhook
+        <label class="tog"><input type="checkbox" id="wh-en" ${wh.enabled?'checked':''}><span class="tog-sl"></span></label>
+        <span class="tog-lbl ${wh.enabled?'on':''}">${wh.enabled?'ENABLED':'DISABLED'}</span>
+      </div>
+      <div class="ss-row"><div class="ss-row-l"><div class="ss-row-name">Webhook URL</div><div class="ss-row-desc">POST on slow tunnel / kill switch</div></div><div class="ss-row-r"><input class="ss-inp" id="wh-url" type="text" value="${esc(wh.url||'')}" placeholder="https://…" style="width:210px;"></div></div>
+      <div class="ss-row"><div class="ss-row-l"><div class="ss-row-name">Alert after X min down</div></div><div class="ss-row-r"><input class="ss-inp" id="wh-aft" type="number" value="${wh.alert_after||5}" style="width:60px;"></div></div>
+      <div class="ss-row"><div class="ss-row-l"><div class="ss-row-name">Test webhook</div></div><div class="ss-row-r"><button class="btn btn-ghost" onclick="webhookTest()">Send Test</button></div></div>
+    </div>
+    <div class="ss-section">
+      <div class="ss-title">🔌 Defaults for New Tunnels</div>
+      <div class="ss-row"><div class="ss-row-l"><div class="ss-row-name">Protocol</div></div><div class="ss-row-r"><select class="ss-sel" id="def-proto"><option value="udp" ${def.protocol==='udp'||!def.protocol?'selected':''}>UDP</option><option value="tcp" ${def.protocol==='tcp'?'selected':''}>TCP</option></select></div></div>
+      <div class="ss-row"><div class="ss-row-l"><div class="ss-row-name">Compression</div></div><div class="ss-row-r"><select class="ss-sel" id="def-comp"><option value="none" ${def.compression==='none'||!def.compression?'selected':''}>None</option><option value="lz4-v2" ${def.compression==='lz4-v2'?'selected':''}>LZ4-v2</option><option value="stub" ${def.compression==='stub'?'selected':''}>Stub</option></select></div></div>
+      <div class="ss-row"><div class="ss-row-l"><div class="ss-row-name">Bandwidth limit</div><div class="ss-row-desc">0 = unlimited</div></div><div class="ss-row-r"><input class="ss-inp" id="def-bw" type="number" value="${def.bandwidth_mb||0}" style="width:60px;"> <span style="font-size:9px;color:var(--txt3);">MB/s</span></div></div>
+    </div>
+    <div class="ss-section">
+      <div class="ss-title">💾 Storage</div>
+      <div class="ss-row"><div class="ss-row-l"><div class="ss-row-name">state.json</div><div class="ss-row-desc">tunnels · settings · cron · speed · MTU · groups · notes · history · logs</div></div><div class="ss-row-r" style="font-family:var(--mono);font-size:10px;color:var(--green);">/etc/vpnctl/state.json</div></div>
+      <div class="ss-row"><div class="ss-row-l"><div class="ss-row-name">.ovpn configs</div></div><div class="ss-row-r" style="font-family:var(--mono);font-size:10px;color:var(--txt2);">/etc/vpnctl/configs/</div></div>
+    </div>`;
+}
+
+function saveSettings() {
+  const g=id=>document.getElementById(id);
+  const settings={
+    speed_test:{enabled:g('st-en').checked, url:g('st-url').value, size_mb:parseInt(g('st-size').value)||5, interval:parseInt(g('st-int').value)||0},
+    auto_restart:{enabled:g('ar-en').checked, threshold_mbps:parseInt(g('ar-thr').value)||10, max_per_hour:parseInt(g('ar-max').value)||3, auto_switch_tcp:g('ar-tcp').checked},
+    mtu:{enabled:g('mtu-en').checked, ping_target:g('mtu-tgt').value, detect_on_connect:g('mtu-doc').checked, apply:g('mtu-apply').checked},
+    ping:{enabled:g('ping-en').checked, interval:parseInt(g('ping-int').value)||30, count:parseInt(g('ping-cnt').value)||4},
+    dns:{enabled:g('dns-en').checked, ip_check_url:g('dns-url').value, check_on_connect:g('dns-coc').checked},
+    kill_switch:{enabled:g('ks-en').checked, allow_lan:g('ks-lan').checked},
+    webhook:{enabled:g('wh-en').checked, url:g('wh-url').value, alert_after:parseInt(g('wh-aft').value)||5},
+    defaults:{protocol:g('def-proto').value, compression:g('def-comp').value, bandwidth_mb:parseInt(g('def-bw').value)||0},
+  };
+  fetch('/api/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(settings)})
+    .then(()=>poll());
+}
+
+// ── Tab switch ────────────────────────────────────────────────────────────────
+function sw(name, el) {
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tp-'+name).classList.add('active');
+  el.classList.add('active');
+  if (name==='settings') renderSettings();
+  if (name==='stats') renderStatsTab();
+}
+
+// ── Tunnel API ────────────────────────────────────────────────────────────────
+async function tunnelStart(idx){await fetch('/api/tunnels/start?index='+idx);poll();}
+async function tunnelStop(idx){await fetch('/api/tunnels/stop?index='+idx);poll();}
+async function tunnelRestart(idx){await fetch('/api/tunnels/restart?index='+idx);poll();}
+async function tunnelDelete(idx){if(!confirm('Remove tunnel config?'))return;await fetch('/api/tunnels/delete?index='+idx,{method:'POST'});poll();}
+async function speedTest(idx){await fetch('/api/tunnels/speedtest?index='+idx);setTimeout(poll,1000);}
+async function speedTestAll(){await fetch('/api/tunnels/speedtest/all');setTimeout(poll,1000);}
+async function mtuDetect(idx){await fetch('/api/tunnels/mtu?index='+idx);setTimeout(poll,2000);}
+async function mtuAll(){await fetch('/api/tunnels/mtu/all');setTimeout(poll,2000);}
+async function ipCheck(){await fetch('/api/ipcheck');setTimeout(poll,2000);}
+
+async function patchTunnelCfg(idx, field, value) {
+  // Get current cfg then patch one field
+  const t = S.tunnels.find(t=>t.index===idx);
+  if (!t) return;
+  const cfg = Object.assign({}, t.cfg||{});
+  cfg[field] = value;
+  await fetch('/api/tunnels/settings?index='+idx,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(cfg)});
+  poll();
+}
+
+// ── Upload ────────────────────────────────────────────────────────────────────
+async function uploadFiles(files) {
+  const fd=new FormData();
+  for (const f of files) fd.append('config',f);
+  const r=await fetch('/api/tunnels/upload',{method:'POST',body:fd});
+  const d=await r.json();
+  if(d&&d.error) alert('Upload error: '+d.error);
+  poll();
+  document.getElementById('file-input').value='';
+}
+
+// Drag & drop
+const zone=document.querySelector('.upload-zone');
+zone.addEventListener('dragover',e=>{e.preventDefault();zone.style.borderColor='var(--blue2)';});
+zone.addEventListener('dragleave',()=>zone.style.borderColor='');
+zone.addEventListener('drop',e=>{e.preventDefault();zone.style.borderColor='';uploadFiles(e.dataTransfer.files);});
+
+// ── Import URL ────────────────────────────────────────────────────────────────
+function toggleImport(){const b=document.getElementById('import-box');b.style.display=b.style.display==='none'?'':'none';}
+async function importURL(){
+  const url=document.getElementById('import-url').value.trim();
+  if(!url)return;
+  const r=await fetch('/api/tunnels/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url})});
+  const d=await r.json();
+  if(d&&d.error){alert('Import error: '+d.error);return;}
+  document.getElementById('import-url').value='';
+  toggleImport();
+  poll();
+}
+
+// ── Groups ────────────────────────────────────────────────────────────────────
+function setGroup(g){activeGroup=g;document.getElementById('grp-all').className='btn '+(g===''?'btn-b':'btn-ghost');renderTunnels();}
+async function addGroup(){
+  const name=prompt('Group name:');
+  if(!name||!name.trim())return;
+  const groups=[...S.groups, name.trim()];
+  await fetch('/api/groups',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(groups)});
+  poll();
+}
+
+// ── Config editor ─────────────────────────────────────────────────────────────
+async function showEditor(idx) {
+  editorIndex=idx;
+  const t=S.tunnels.find(t=>t.index===idx);
+  document.getElementById('editor-title').textContent='✏️ Edit Config — '+(t?t.name:idx);
+  document.getElementById('cfg-note').value=t&&t.cfg&&t.cfg.note||'';
+  const r=await fetch('/api/tunnels/config?index='+idx);
+  const d=await r.json();
+  document.getElementById('cfg-editor').value=d.content||'';
+  document.getElementById('editor-modal').style.display='flex';
+}
+function hideEditor(){document.getElementById('editor-modal').style.display='none';}
+async function saveConfig(){
+  const content=document.getElementById('cfg-editor').value;
+  const note=document.getElementById('cfg-note').value;
+  const r=await fetch('/api/tunnels/config?index='+editorIndex,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({content,note})});
+  const d=await r.json();
+  if(d&&d.error){alert('Save error: '+d.error);return;}
+  hideEditor();poll();
+}
+async function saveConfigAndRestart(){
+  await saveConfig();
+  await tunnelRestart(editorIndex);
+}
+
+// ── Cron ──────────────────────────────────────────────────────────────────────
+async function cronAdd(){
+  const expr=document.getElementById('cron-expr').value.trim();
+  const target=document.getElementById('cron-target').value;
+  if(!expr)return;
+  const r=await fetch('/api/cron/add',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({expression:expr,target,action:'restart'})});
+  const d=await r.json();
+  if(d&&d.error){alert('Cron error: '+d.error);return;}
+  document.getElementById('cron-expr').value='';
+  poll();
+}
+async function cronDelete(id){await fetch('/api/cron/delete?id='+id);poll();}
+
+// ── Kill Switch ───────────────────────────────────────────────────────────────
+async function ksDisarm(){await fetch('/api/killswitch/disarm',{method:'POST'});poll();}
+
+// ── Logs ──────────────────────────────────────────────────────────────────────
+async function clearLogs(){await fetch('/api/logs/clear',{method:'POST'});poll();}
+
+// ── Webhook ───────────────────────────────────────────────────────────────────
+async function webhookTest(){await fetch('/api/webhook/test',{method:'POST'});alert('Webhook test sent');}
+
+// ── Backup/Restore ────────────────────────────────────────────────────────────
+async function restoreBackup(file){
+  if(!file||!confirm('Restore backup? Current state will be overwritten.'))return;
+  const fd=new FormData(); fd.append('backup',file);
+  const r=await fetch('/api/restore',{method:'POST',body:fd});
+  const d=await r.json();
+  alert(d.status||d.error||'Done');
+  poll();
 }
 </script>
 </body>
